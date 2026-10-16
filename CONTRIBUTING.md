@@ -1,5 +1,11 @@
 # Contributing
 
+Use the **Bug report** or **Feature request** issue form to describe a problem
+before proposing a change. Follow the [code of conduct](CODE_OF_CONDUCT.md) in
+project discussions and [SECURITY.md](SECURITY.md) for sensitive findings.
+For usage questions, start with the [website](https://favcon.cevdet.ch) and
+[README](README.md); open a blank issue if they do not answer your question.
+
 ## The one rule
 
 **Every pipeline change arrives with a number.**

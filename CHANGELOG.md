@@ -9,6 +9,17 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ## [Unreleased]
 
+### Changed
+
+- Update repository and maintainer links to `cevdetch` and connect the package
+  and website publisher to `https://cevdet.ch/`.
+
+### Added
+
+- Code of conduct, security policy, feature-request form and pull-request
+  template. CODEOWNERS requests maintainer review; Dependabot checks pinned
+  GitHub Actions weekly with a seven-day cooldown.
+
 ## [0.1.0] - 2026-10-01
 
 ### Added
@@ -164,5 +175,5 @@ minor at minimum, never patch.** Downstream users diff these files into git.
   `toolPath()` and `toolVersions()` exports. The native pipeline survives in `bench/` as the
   measured reference.
 
-[Unreleased]: https://github.com/cevdetta/favcon/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/cevdetta/favcon/releases/tag/v0.1.0
+[Unreleased]: https://github.com/cevdetch/favcon/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cevdetch/favcon/releases/tag/v0.1.0

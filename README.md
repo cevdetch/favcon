@@ -384,6 +384,20 @@ The short version, because these are the parts that look wrong until you know wh
   per size looked obvious. It saved 13.5 %, because the 512 px icon alone takes as long as the
   whole parallel build, and no core count gets past that (decision 27).
 
+## Contributing and help
+
+For usage questions, start with the [website](https://favcon.cevdet.ch) and the
+examples above. Use the repository's issue forms for bugs and feature requests.
+See [CONTRIBUTING.md](https://github.com/cevdetch/favcon/blob/main/CONTRIBUTING.md)
+for setup and the measurement requirements for pipeline changes.
+
+Follow the [code of conduct](https://github.com/cevdetch/favcon/blob/main/CODE_OF_CONDUCT.md)
+in project discussions. Report sensitive findings through the
+[security policy](https://github.com/cevdetch/favcon/security/policy).
+
+Created and maintained by [Cevdet](https://cevdet.ch/)
+([cevdetch](https://github.com/cevdetch)).
+
 ## Licence
 
 MIT. favcon spawns nothing. `@napi-rs/image` is MIT (its quantiser has been clean-room MIT

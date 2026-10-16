@@ -15,7 +15,13 @@ const jsonLd = JSON.stringify({
   url,
   description,
   inLanguage: 'en',
-  publisher: { '@type': 'Person', name: 'Cevdet', url: 'https://github.com/cevdetta' },
+  publisher: {
+    '@type': 'Person',
+    '@id': 'https://cevdet.ch/#person',
+    name: 'Cevdet',
+    url: 'https://cevdet.ch/',
+    sameAs: ['https://github.com/cevdetch'],
+  },
 }).replaceAll('<', '\\u003c');
 
 const outputs = [
@@ -159,7 +165,8 @@ const outputs = [
 </main>
 
 <footer>
-  MIT. <a href="https://github.com/cevdetta/favcon">Source</a> ·
+  By <a href="https://cevdet.ch/">Cevdet</a> · MIT ·
+  <a href="https://github.com/cevdetch/favcon">Source</a> ·
   favcon also ships a CLI and an Astro integration.
 </footer>
 

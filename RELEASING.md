@@ -15,12 +15,11 @@ minimum**, never patch: downstream users diff these files into git.
 
 ## Before 0.1.0: one-time setup
 
-1. **GitHub.** Create `cevdetta/favcon` and push `main`. `package.json`'s `repository` must
+1. **GitHub.** Verify the repository is `cevdetch/favcon`. `package.json`'s `repository` must
    name the repository the workflow runs in, or npm rejects the provenance.
 
    ```sh
-   git remote add origin git@github.com:cevdetta/favcon.git
-   git push -u origin main
+   git remote get-url origin   # git@github.com:cevdetch/favcon.git
    ```
 
    Wait for CI to pass on `main` before going further.
@@ -77,7 +76,7 @@ On an up-to-date `main` with a clean working tree and CI green:
    ```
 
 6. Set up trusted publishing for every later release, on npmjs.com, under the package:
-   - **Settings → Trusted publishing → GitHub Actions**: repository `cevdetta/favcon`,
+   - **Settings → Trusted publishing → GitHub Actions**: repository `cevdetch/favcon`,
      workflow `release.yml`, environment `npm`, publishing mode **stage** (direct publishing
      off).
    - **Settings → Publishing access**: "Require two-factor authentication and disallow
