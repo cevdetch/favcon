@@ -2,6 +2,10 @@ name: Bug report
 description: Something built wrong, or did not build at all.
 labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        For sensitive security findings, follow [SECURITY.md](https://github.com/cevdetch/favcon/security/policy).
   - type: textarea
     id: what
     attributes:

@@ -253,7 +253,7 @@ Options:
                     (default: auto). \`auto\` measures the mark's own extent and snaps it to
                     whole pixels, which is smaller and sharper than any fixed number. Give
                     a number to override it. Why: decisions 20 and 22 in
-                    https://github.com/cevdetta/favcon/blob/main/docs/DECISIONS.md
+                    https://github.com/cevdetch/favcon/blob/main/docs/DECISIONS.md
       --var N=V     Set a CSS custom property, e.g. --var c-primary=#0E7C68. Repeatable.
                     Without it, var(--x, fallback) resolves to its fallback, the way a
                     browser resolves an undefined property.

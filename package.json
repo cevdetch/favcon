@@ -4,7 +4,10 @@
   "description": "One SVG in, an optimised favicon set out.",
   "type": "module",
   "license": "MIT",
-  "author": "Cevdet",
+  "author": {
+    "name": "Cevdet",
+    "url": "https://cevdet.ch/"
+  },
   "bin": {
     "favcon": "bin/favcon.mjs"
   },
@@ -78,10 +81,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cevdetta/favcon.git"
+    "url": "git+https://github.com/cevdetch/favcon.git"
   },
   "bugs": {
-    "url": "https://github.com/cevdetta/favcon/issues"
+    "url": "https://github.com/cevdetch/favcon/issues"
   },
   "homepage": "https://favcon.cevdet.ch",
   "publishConfig": {

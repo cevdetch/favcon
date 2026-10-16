@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement to the CLI, integrations, browser tool or documentation.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should favcon solve?
+      description: Describe the task or limitation, with an example when useful.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Show the command, configuration or output you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Describe any workaround or other approach you considered.
