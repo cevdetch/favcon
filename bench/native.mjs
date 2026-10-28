@@ -1,4 +1,4 @@
-// The native toolchain favcon's decisions were measured on: resvg, pngquant and oxipng,
+// The native toolchain favseed's decisions were measured on: resvg, pngquant and oxipng,
 // spawned by name from PATH. The package no longer uses them; the bench keeps them so every
 // byte claim stays comparable with that pipeline.
 import { execFile } from 'node:child_process';

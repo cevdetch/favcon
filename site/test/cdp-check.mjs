@@ -38,7 +38,7 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
-const profile = mkdtempSync(join(tmpdir(), 'favcon-cdp.'));
+const profile = mkdtempSync(join(tmpdir(), 'favseed-cdp.'));
 const PORT = 9333 + (process.pid % 500);
 // CHROME names another Chromium-family binary: CI's runner image has `google-chrome`.
 const chrome = spawn(process.env.CHROME ?? 'chromium', [

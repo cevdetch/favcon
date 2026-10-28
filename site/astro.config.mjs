@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 // deploy workflow. Everything that touches an SVG runs in the visitor's tab: there is no
 // endpoint to upload a mark to, because there is no server to receive it.
 export default defineConfig({
-  site: 'https://favcon.cevdet.ch',
+  site: 'https://favseed.cevdet.ch',
   output: 'static',
   // Cloudflare Pages canonicalises a directory index as /foo/ and 308s /foo to it. Emitting
   // /foo.html instead serves the slash-free URL with no redirect, which is Cloudflare's own
@@ -21,7 +21,7 @@ export default defineConfig({
   },
   integrations: [
     {
-      name: 'favcon-host',
+      name: 'favseed-host',
       hooks: {
         // Hashed build assets never change under the same name; everything else is revalidated.
         'astro:build:done': async ({ dir }) => {
@@ -31,7 +31,7 @@ export default defineConfig({
     },
   ],
   vite: {
-    // lib/core.mjs lives above this directory: the site shares favcon's isomorphic half by
+    // lib/core.mjs lives above this directory: the site shares favseed's isomorphic half by
     // importing the file, not by copying it. Vite refuses to serve outside the project root in
     // dev unless told, and this is the one exception.
     server: { fs: { allow: [fileURLToPath(new URL('..', import.meta.url))] } },

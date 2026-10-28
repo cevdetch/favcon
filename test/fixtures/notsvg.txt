@@ -1,1 +1,1 @@
-This is not an SVG. It is a text file, and favcon must say so.
+This is not an SVG. It is a text file, and favseed must say so.

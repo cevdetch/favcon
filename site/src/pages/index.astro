@@ -4,14 +4,14 @@
 // resolve and bundle them.
 import '../styles/app.css';
 
-const title = 'favcon: one SVG in, an optimised favicon set out';
+const title = 'favseed: one SVG in, an optimised favicon set out';
 const description = 'Turn one SVG into favicon.ico, icon.svg, an apple-touch-icon and maskable PWA icons, quantised and recompressed. Runs in your browser; nothing is uploaded.';
 const url = new URL('/', Astro.site).href;
 // JSON inside <script> ends at the first "</script", so every "<" is escaped.
 const jsonLd = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'favcon',
+  name: 'favseed',
   url,
   description,
   inLanguage: 'en',
@@ -40,14 +40,14 @@ const outputs = [
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{title}</title>
 <meta name="color-scheme" content="light dark" />
-<!-- The site's own set, built by favcon: the same block `favcon --html --manifest` prints. -->
+<!-- The site's own set, built by favseed: the same block `favseed --html --manifest` prints. -->
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
 <link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <link rel="canonical" href={url} />
 <meta name="description" content={description} />
-<meta property="og:site_name" content="favcon" />
+<meta property="og:site_name" content="favseed" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content={url} />
 <meta property="og:title" content={title} />
@@ -57,7 +57,7 @@ const outputs = [
 </head>
 <body>
 <header>
-  <h1><img src="/logo.svg" alt="" width="40" height="40" />favcon</h1>
+  <h1><img src="/logo.svg" alt="" width="40" height="40" />favseed</h1>
   <p>One SVG in, an optimised favicon set out.</p>
   <p><small>
     Everything below runs in this tab. There is no upload endpoint, because there is no server
@@ -103,7 +103,7 @@ const outputs = [
       <tbody id="files"></tbody>
     </table>
     <p><small id="fit"></small></p>
-    <a id="zip" class="button" download="favcon.zip">Download .zip</a>
+    <a id="zip" class="button" download="favseed.zip">Download .zip</a>
     <h3>Add to your <code>&lt;head&gt;</code></h3>
     <pre id="links"></pre>
   </section>
@@ -159,15 +159,15 @@ const outputs = [
     </p>
     <p>
       Treat this as a preview you can see and click. For bytes you can measure, reproduce and
-      diff into git, run <code>npx favcon logo.svg</code>.
+      diff into git, run <code>npx favseed logo.svg</code>.
     </p>
   </aside>
 </main>
 
 <footer>
   By <a href="https://cevdet.ch/">Cevdet</a> · MIT ·
-  <a href="https://github.com/cevdetch/favcon">Source</a> ·
-  favcon also ships a CLI and an Astro integration.
+  <a href="https://github.com/cevdetch/favseed">Source</a> ·
+  favseed also ships a CLI and an Astro integration.
 </footer>
 
 <script>

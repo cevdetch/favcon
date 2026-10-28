@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { loadEngine, optimiseSvg } from '../bin/favcon.mjs';
+import { loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseVars } from '../lib/core.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { header } from './lib/png.mjs';

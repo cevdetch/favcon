@@ -1,7 +1,7 @@
 // Hand-written, like astro/index.d.ts: the options are a smaller surface than argv.
 
-/** Every key favcon.config.js, .mjs or .ts may set. Flags win over it. */
-export interface FavconConfig {
+/** Every key favseed.config.js, .mjs or .ts may set. Flags win over it. */
+export interface FavseedConfig {
   /** The mark. Relative to the working directory. */
   input?: string;
   /** Output directory. Default: the working directory. */
@@ -27,7 +27,7 @@ export interface FavconConfig {
 }
 
 /** Returns its argument, typed. */
-export function defineConfig(config: FavconConfig): FavconConfig;
+export function defineConfig(config: FavseedConfig): FavseedConfig;
 
 /** How the mark was placed in one padded icon. */
 export interface Placement {
@@ -40,9 +40,9 @@ export interface Placement {
   padding: number;
 }
 
-export interface BuildOptions extends FavconConfig {
+export interface BuildOptions extends FavseedConfig {
   input: string;
-  /** Called with each warning's text, without the `favcon: warning:` prefix. */
+  /** Called with each warning's text, without the `favseed: warning:` prefix. */
   onWarn?: (message: string) => void;
 }
 
@@ -61,13 +61,13 @@ export interface BuildResult {
   links: string;
 }
 
-/** Builds the set into `out`. Throws FavconError with a finished message; never exits. */
+/** Builds the set into `out`. Throws FavseedError with a finished message; never exits. */
 export function build(options: BuildOptions): Promise<BuildResult>;
 
 /** The CLI on an argv array. Resolves to the exit code; exits the process on an error. */
 export function cli(argv: string[]): Promise<number>;
 
-export class FavconError extends Error {}
+export class FavseedError extends Error {}
 
 /** The engine's package versions, which the output bytes depend on. */
 export function engineVersions(): { '@napi-rs/image': string; '@gfx/zopfli': string };

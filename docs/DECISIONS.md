@@ -13,13 +13,13 @@ Distance is the largest single-channel difference: an error passes only when it 
 every channel, not when it is small on average.
 
 Reference = an unquantised resvg render of the **var-resolved source** at the same size, not
-of favcon's own `icon.svg`, which would make the gate blind to the geometry error
+of favseed's own `icon.svg`, which would make the gate blind to the geometry error
 `floatPrecision` introduces before a rasteriser is ever involved.
 
 RMSE is reported alongside but does not gate: error is driven by *size*, not by the mark, so
 one RMSE threshold is the wrong shape. At 16 px almost every pixel is an anti-aliasing edge.
 
-**The bar is a statement about the sizes favcon ships by default**: 180, 256 and 512. It is
+**The bar is a statement about the sizes favseed ships by default**: 180, 256 and 512. It is
 not reachable at every size a user can ask for, and pretending otherwise would make it
 meaningless: a 32 px icon is 1024 pixels of which almost all are edges, and no palette
 reproduces an anti-aliasing ramp to 8/255. The size curve is in `docs/BENCHMARKS.md`; the
@@ -52,22 +52,22 @@ conflict, the bar wins, and decision 6 below turns on that.
 | 6 | **PNG: `pngquant --speed 1 --nofs --colors N`, then `oxipng`.** | Quantise-then-recompress is mandatory: pngquant re-encodes from scratch, so any order ending in pngquant throws away everything oxipng did. **Re-measured at 256 px over ten marks: 9 707 B in that order, 10 657 B reversed (+9.8 %).** `--nofs` beats every dither setting on bytes and still passes. `--speed 1` is smallest *and* most accurate. `--posterize` is rejected: its least aggressive legal value (4) already misses the bar. |
 | 7 | **Keep whichever of the lossy and lossless paths is smaller.** **Re-measured:** at `--colors 8` lossless wins 0/50 and the guard costs nothing (−0.14 % from adding Floyd-Steinberg as a third candidate; it wins 7/50). | The guard is not inert at higher palettes. Measured on `gradient.svg`, the winning encoding by size is indexed everywhere at `--colors` 8/32/64; at 128 the **lossless** path wins at 16 px; at 256 it wins at 16 **and** 32 px, because pngquant's palette overhead exceeds what oxipng's own colour reduction achieves on a small image. Without the guard, raising `--colors` produces *larger* files, and nothing reports it. It is also what gives the gradient fixture a non-indexed ICO payload, which is the only thing that proves the hardcoded `wBitCount = 32` right for a truecolour payload. |
 | 8 | **Zopfli runs once, on the winner of that comparison**, at `--zi 120`. **Re-measured** (idle machine; the timings are worthless on a loaded one): 30 172 B at `--zi 15` in 30 s, 29 985 B at 120 in 169 s (−0.62 %), 29 962 B at 240 in 315 s (−0.70 %). 120 costs 5.7× the time of the default to save 0.62 %; 240 doubles that again for a further 0.08 pp, so the knee is at 120. | Zopfli-ing both paths triples the cost for zero extra bytes: decide with the cheap `-o max -s` pass, then zopfli only the winner. **Use the long flag `--zopfli`:** oxipng 10.0.0 changed the short form from `-Z` to `-z`, and `-Z` survives only as an undocumented compatibility alias. The long form is the one that is correct on both 9.x and 10.x. |
-| 9 | **`favicon.ico`: one 32×32 entry, raw PNG payload, container written in JS.** **Re-measured:** the BMP payload icotool writes by default is **16.4× larger** (39 340 B vs 2 403 B over the fixtures), and favcon's 22-byte writer is **byte-identical to `icotool -c -r` on 10/10**. | That removes the only dependency with no npm package and no Windows build. `wBitCount` is the field to get wrong: the directory entry describes the *decoded* 32-bit image, not the encoding, so it is 32 even for a 4-bit paletted payload, and `bColorCount` is 0 for one too. |
+| 9 | **`favicon.ico`: one 32×32 entry, raw PNG payload, container written in JS.** **Re-measured:** the BMP payload icotool writes by default is **16.4× larger** (39 340 B vs 2 403 B over the fixtures), and favseed's 22-byte writer is **byte-identical to `icotool -c -r` on 10/10**. | That removes the only dependency with no npm package and no Windows build. `wBitCount` is the field to get wrong: the directory entry describes the *decoded* 32-bit image, not the encoding, so it is 32 even for a 4-bit paletted payload, and `bColorCount` is 0 for one too. |
 | 10 | **`--bg` defaults to opaque black**, with a stderr warning when it is not given, **validated by probing resvg** (a 1×1 render, ~3 ms) rather than by a colour table. | iOS composites transparent Home Screen icons onto **black**, so black is what the platform would have produced from a transparent icon anyway. The default now matches that instead of substituting white without a word, and the file is smaller for it (no tRNS, simpler palette). A mark drawn on a light ground wants `--bg '#fff'`, which is why the warning fires whenever the flag is absent. Probing means `rgb()`, `rgba()` and `hsl()` all work and the validator can never disagree with the renderer. A name list rejects `rgb()`, and a loose `/^[A-Za-z]+$/` accepts `nonered`. Applies to every padded icon (`apple-touch-icon.png` and each `icon-<size>.png`, decision 22); the ICO payload stays transparent. Corners stay square; the OS applies its own mask. |
 | 11 | **`--sizes` defaults to `192 512`.** *(Reversed. The original was `256 512`.)* | The documentation every browser is held to asks for both: web.dev's install criteria ("must include a 192px and a 512px icon", 2024-09-19), Chrome's Lighthouse installable-manifest doc (2024-04-16) and MDN's Making PWAs installable (2026-09-07). Desktop Chromium's code is looser: `installable_evaluator.cc` accepts one `any` icon of 144 px or more, and Chromium 152's `Page.getInstallabilityErrors` reported no error for a manifest with only a 512. That is one engine on one platform, with Android, Edge, Samsung Internet and Firefox untested, so the documented pair wins; the 192 costs 159 B on a flat mark. SVG cannot stand in for either: an SVG entry makes the Android WebAPK install fail ([crbug.com/40925759](https://issues.chromium.org/issues/40925759)). |
 | 12 | **The SVG is emitted twice: `logo.svg` keeps the animation, `icon.svg` never has it.** | Publishing the stripped copy costs nothing (it was already being built) and removes the one thing a single-file layout got wrong: a favicon `<link>` pointing at a file carrying `<style>`, `@keyframes` and classes that no rasteriser and no ICO can use. **Re-measured:** every raster is byte-identical between the default and `--no-animation` builds, and `icon.svg` is the smaller of the two on every fixture. |
 | 13 | **The rasters stay serial.** **Scope:** this measures the native pipeline in `bench/`. The engine's version is decision 27. **Re-measured and confirmed, though not for the reason first given; see the note below the table.** | Zopfli is ~98 % of wall clock, so overlapping it looked obvious. It is not. Four interleaved reps each: **13.80 s serial vs 14.08 s concurrent**. A `-t` sweep (2/4/6/8/10/12/16) moved contention around without beating it. The concurrency first spent on the two svgo passes (0.894 s → 0.456 s) is gone, though not for the reason first recorded: see decision 1. Importing svgo replaced two ~180 ms concurrent spawns with one 309 ms import. The `--bg` probe is still overlapped, because it is a real spawn. |
 | 14 | **One render per distinct (size, background).** | Since the set collapsed to one padded set, `--sizes 32` now renders twice: `(32, bg)` for `icon-32.png` and `(32, null)` for the ICO payload. Under `--bg none` the icon is unpadded too, so the two share one render and "the ICO payload is `icon-32.png`" holds again, by construction rather than by coincidence, as before. |
-| 15 | **Superseded by decision 26:** favcon ships no binaries. **External binaries: `resvg` and `oxipng` are documented installs; `pngquant-bin` is an `optionalDependency`; `svgo` is a real dependency.** | No npm package can deliver resvg or oxipng. `resvg-cli` uses `--fit-width`, not `-w`, and pins resvg 0.34 against the 0.48.1 favcon is measured with. `oxipng` on npm is 1.0.1 from 2021 (wrapping oxipng 4.0.3) and `oxipng-bin` wraps 8.0.0. **Neither has `--zi`**, so wiring them up would produce larger files with no error. |
+| 15 | **Superseded by decision 26:** favseed ships no binaries. **External binaries: `resvg` and `oxipng` are documented installs; `pngquant-bin` is an `optionalDependency`; `svgo` is a real dependency.** | No npm package can deliver resvg or oxipng. `resvg-cli` uses `--fit-width`, not `-w`, and pins resvg 0.34 against the 0.48.1 favseed is measured with. `oxipng` on npm is 1.0.1 from 2021 (wrapping oxipng 4.0.3) and `oxipng-bin` wraps 8.0.0. **Neither has `--zi`**, so wiring them up would produce larger files with no error. |
 
 
 ### Decision 13, re-measured: it holds, but the stated reason was wrong
 
 A cross-tool comparison looked like it refuted decision 13: `favicon.sh` renders four sizes at
-once and finishes a like-for-like build in 12.5 s against favcon's 17.8 s, with user times
+once and finishes a like-for-like build in 12.5 s against favseed's 17.8 s, with user times
 within 7 % of each other. That reading was wrong, and it was wrong in an instructive way: the
 comparison confounds two variables, because `favicon.sh` also passes a bare `--zopfli`, which
-is `--zi 15`, where favcon passes `--zi 120`.
+is `--zi 15`, where favseed passes `--zi 120`.
 
 Crossing the two axes under control (four jobs, identical work in every arm, three
 interleaved repetitions, 16 cores):
@@ -104,7 +104,7 @@ expected.
 
 ### 16. Tool resolution probes; finding a path is not enough
 
-> **Superseded by decision 26:** favcon spawns no tools, so there is nothing to resolve.
+> **Superseded by decision 26:** favseed spawns no tools, so there is nothing to resolve.
 
 A path on disk is not proof of a working tool. `pngquant-bin` installs
 `node_modules/.bin/pngquant` as a Node script that execs a binary its postinstall downloads in
@@ -121,7 +121,7 @@ The version strings are not a by-product: the Astro cache is keyed on them, beca
 tools change their output bytes across releases, and a cache keyed only on the SVG hands back
 stale files after a `brew upgrade` with nothing on screen to say so.
 
-An explicit `FAVCON_RESVG` / `FAVCON_PNGQUANT` / `FAVCON_OXIPNG` override is the one
+An explicit `FAVSEED_RESVG` / `FAVSEED_PNGQUANT` / `FAVSEED_OXIPNG` override is the one
 exception: it is a hard error rather than a fall-through, because running a different binary
 than the one that was named, without saying so, is worse than not running at all.
 
@@ -160,7 +160,7 @@ Error: Unmatched selector: %   at css-what parse.js:128
 ```
 
 That path is reached from `removeDeprecatedAttrs`, `removeUnknownsAndDefaults`,
-`inlineStyles` and more, so disabling one plugin only moves the crash. favcon **hoists** any
+`inlineStyles` and more, so disabling one plugin only moves the crash. favseed **hoists** any
 `@keyframes` nested in an at-rule out to the top level of the same stylesheet instead, which
 removes the input that triggers it. The hoist is safe: `@keyframes` has no cascade and no
 conditional behaviour, it only defines a name. What decides whether the mark moves is the
@@ -272,7 +272,7 @@ icon, milliseconds each, against a build of seconds.
 
 ### 21. An isomorphic core, because the website runs the same SVG stage
 
-The house style in CONTRIBUTING.md says `bin/favcon.mjs` stays one file. The website breaks
+The house style in CONTRIBUTING.md says `bin/favseed.mjs` stays one file. The website breaks
 that, and the reason is recorded here in full rather than letting the rule lapse without a
 word.
 
@@ -312,7 +312,7 @@ is not libimagequant, and `@jsquash/oxipng` exposes no zopfli. The site says so 
 (That was at `--colors 8`. At the default of 256, decision 24, the two quantisers stop fighting
 over which few colours to keep and the PNGs land within −6.1 % to +8.3 % of the CLI's.)
 
-**The split also broke the published package, for a short while.** `bin/favcon.mjs` imports
+**The split also broke the published package, for a short while.** `bin/favseed.mjs` imports
 `../lib/core.mjs`, and `files` shipped only `bin` and `astro`, so the tarball would have
 installed and then thrown `ERR_MODULE_NOT_FOUND` on first run. `lib` now ships and the
 tarball test asserts it by name: the one assertion standing between the split and a broken
@@ -386,13 +386,13 @@ Decision 19 shipped 8 colours as a stated trade: about 18 % smaller than 16, and
 1.0 % accuracy bar on anti-aliased marks. Two things made that the wrong trade.
 
 **8 is not a mild miss on every mark.** On a gradient it is a broken one: 27–28 % of pixels
-off by a visible margin at every size, and favcon's own benchmark excluded the gradient from
+off by a visible margin at every size, and favseed's own benchmark excluded the gradient from
 its worst-case line as "meant to be bad". A favicon generator that wrecks a common kind of mark
 by default, and says so only in a benchmark, is not making a trade users can see.
 
-**Matched against a competitor, 8 colours is where most of favcon's byte lead came from.**
+**Matched against a competitor, 8 colours is where most of favseed's byte lead came from.**
 Measured 2026-10-01 against `@vite-pwa/assets-generator` 2.0.0 (sharp, `quality: 60`): fed the
-same lossless pixels, favcon's encoder at 16 colours beats or matches its bytes on typical marks
+same lossless pixels, favseed's encoder at 16 colours beats or matches its bytes on typical marks
 (−6 % to +5 % over four files) while being more accurate on every file, and wins by 30 % only
 on pixel-grid marks. The large default-set gaps came from fewer files and fewer colours. Bytes
 won through visible error are not a lead worth having.
@@ -422,7 +422,7 @@ who wants the old trade, and a test pins that it still misses the bar on `flat.s
 
 A dark-mode rule is the usual reason to ship an SVG favicon: a dark mark disappears on a dark
 tab strip, and browsers apply `@media (prefers-color-scheme: dark)` inside an SVG favicon.
-favcon dropped the block from both SVGs without a warning. `inlineStyles` consumed the class
+favseed dropped the block from both SVGs without a warning. `inlineStyles` consumed the class
 it selects, and csso then removed the `@media` rule as unused, the same path decision 18 closed
 for motion classes. For a static source the logo pass never runs, so its guard never applied.
 
@@ -441,8 +441,8 @@ PNG set: no platform asks a favicon PNG for a colour scheme.
 
 ### 26. One engine: @napi-rs/image and @gfx/zopfli
 
-favcon needed three native binaries that no npm package delivers at the versions it was
-measured with (decision 15), so `npx favcon` failed on a fresh machine until the user installed
+favseed needed three native binaries that no npm package delivers at the versions it was
+measured with (decision 15), so `npx favseed` failed on a fresh machine until the user installed
 them by hand, and the website ran a separate WASM substitute. One npm package now carries the
 whole raster stage, at those versions.
 
@@ -450,7 +450,7 @@ The spike behind it (2026-10-04):
 
 | question | finding |
 |---|---|
-| One package for resvg, pngquant and oxipng? | `@napi-rs/image` (MIT, prebuilt for Linux, macOS and Windows on x64 and arm64, FreeBSD on x64, and more) bundles **resvg 0.48.1** and **oxipng 10.2.1**, the versions favcon pins. Its quantiser has been its own clean-room MIT code since 1.13.0; 1.12.x and earlier link the GPL-3 libimagequant. |
+| One package for resvg, pngquant and oxipng? | `@napi-rs/image` (MIT, prebuilt for Linux, macOS and Windows on x64 and arm64, FreeBSD on x64, and more) bundles **resvg 0.48.1** and **oxipng 10.2.1**, the versions favseed pins. Its quantiser has been its own clean-room MIT code since 1.13.0; 1.12.x and earlier link the GPL-3 libimagequant. |
 | Render fidelity | `fromSvg` never renders below 1000 px. Wrapping the icon in an outer SVG with `scale(N/vbW N/vbH) translate(-vbX -vbY)` and cropping to N×N is **pixel-identical to `resvg -w N -h N`** on 40/40 files; rendering big and resizing fails the bar (10–38 % at 32 px). The suite asserts it on 24 renders wherever resvg is on PATH. |
 | Zopfli without a native build | napi's prebuilt leaves zopfli out. Re-deflating the winner's image data with `@gfx/zopfli` (WASM, Apache-2.0), keeping napi's row filters, lands within +0.21 % of oxipng's own zopfli, with identical decoded pixels on 80/80. |
 | Browser | `@napi-rs/image-wasm32-wasi` gives SHA-256-identical output to the native module, in a cross-origin-isolated page. |
@@ -473,7 +473,7 @@ bytes on a flat mark, against no install step on any platform, one engine shared
 website, and a gradient that is 9 % smaller.
 
 It removes resvg, pngquant and oxipng as install steps, the PATH resolver of
-decision 16, `pngquant-bin`, the `FAVCON_RESVG`/`FAVCON_PNGQUANT`/`FAVCON_OXIPNG` overrides and
+decision 16, `pngquant-bin`, the `FAVSEED_RESVG`/`FAVSEED_PNGQUANT`/`FAVSEED_OXIPNG` overrides and
 the `toolPath()`/`toolVersions()` exports. `engineVersions()` takes their place in the Astro
 cache key. The native toolchain stays in `bench/native.mjs`, so every byte claim can still be
 checked against the pipeline the earlier decisions were measured on.

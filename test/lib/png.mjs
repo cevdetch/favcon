@@ -3,7 +3,7 @@
 // The suite used to shell out to ImageMagick for this. It cannot any more: ImageMagick is no
 // longer preinstalled on ubuntu-24.04, and apt's version is IM6, whose binary is `convert`
 // rather than `magick`, so a shell suite fails on a fresh runner in a way that looks like a
-// favcon bug and is not. Everything here needs is IHDR arithmetic and one inflate.
+// favseed bug and is not. Everything here needs is IHDR arithmetic and one inflate.
 //
 // Adam7 is unsupported by design: neither of the engine's encodes interlaces, so supporting
 // it would be untested code standing in for a clear error.

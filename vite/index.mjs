@@ -1,30 +1,30 @@
-// favcon/vite: the favicon set as a Vite plugin. In dev it is built on the first request for
+// favseed/vite: the favicon set as a Vite plugin. In dev it is built on the first request for
 // an icon and served from memory; in a build it is emitted at the output root. Nothing is
-// written to public/, and a file there with a name favcon emits is never shadowed.
+// written to public/, and a file there with a name favseed emits is never shadowed.
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
-import { buildFiles, CONFIG_FILES, engineVersions, FavconError, linkTags, loadConfigFile } from '../bin/favcon.mjs';
+import { buildFiles, CONFIG_FILES, engineVersions, FavseedError, linkTags, loadConfigFile } from '../bin/favseed.mjs';
 import { normaliseOptions, resolveOptions } from '../lib/config.mjs';
 import { declaresIcon, manifestIcons } from '../lib/core.mjs';
-import { cacheKey, favconVersion, readSlot, writeSlot } from './cache.mjs';
+import { cacheKey, favseedVersion, readSlot, writeSlot } from './cache.mjs';
 
 /**
- * The icon entries favcon's manifest would list, for vite-plugin-pwa's `manifest.icons`.
+ * The icon entries favseed's manifest would list, for vite-plugin-pwa's `manifest.icons`.
  * Synchronous, because vite.config runs before any build; pass the sizes, bg and base the
- * favcon plugin uses. vite-plugin-pwa offers no public API to set them from another plugin.
+ * favseed plugin uses. vite-plugin-pwa offers no public API to set them from another plugin.
  */
-export const favconIcons = ({ sizes, bg, base } = {}) => {
+export const favseedIcons = ({ sizes, bg, base } = {}) => {
   const o = normaliseOptions({ sizes, bg, base });
   return manifestIcons({ sizes: o.sizes, base: o.base, purpose: o.bg === null ? null : 'any maskable' });
 };
 
-const VIRTUAL = 'virtual:favcon';
-const RESOLVED = '\0virtual:favcon';
+const VIRTUAL = 'virtual:favseed';
+const RESOLVED = '\0virtual:favseed';
 const PWA = 'vite-plugin-pwa';
 const TYPES = { ico: 'image/x-icon', svg: 'image/svg+xml', png: 'image/png', webmanifest: 'application/manifest+json' };
-const message = (e) => (e instanceof FavconError ? `favcon: ${e.message}` : String(e?.message ?? e));
+const message = (e) => (e instanceof FavseedError ? `favseed: ${e.message}` : String(e?.message ?? e));
 
 /**
  * Only a real build's client environment emits. Astro also runs a `client` environment in
@@ -33,8 +33,8 @@ const message = (e) => (e instanceof FavconError ? `favcon: ${e.message}` : Stri
  */
 const emitsHere = (env) => env?.mode === 'build' && env.config?.consumer === 'client';
 
-export default function favcon(options = {}) {
-  if ('out' in options) throw new FavconError("the Vite plugin has no 'out': Vite's build.outDir decides where the files go");
+export default function favseed(options = {}) {
+  if ('out' in options) throw new FavseedError("the Vite plugin has no 'out': Vite's build.outDir decides where the files go");
   let root, publicDir, viteBase, cacheDir, logger, pwa = null;
   // Kept per mode: configResolved can fire on one instance for a dev-mode server and for the
   // build (Astro runs both in one `astro build`), and dev forces fast mode. One shared
@@ -45,26 +45,26 @@ export default function favcon(options = {}) {
   const warned = new Set();
   const warnOnce = (text) => { if (!warned.has(text)) { warned.add(text); logger.warn(text); } };
 
-  /** Plugin options over favcon.config.* in the Vite root over the defaults. */
+  /** Plugin options over favseed.config.* in the Vite root over the defaults. */
   const resolveSettings = async (dev) => {
     const { config, file, ignored } = await loadConfigFile(root);
-    for (const f of ignored) warnOnce(`favcon: ${f} ignored: ${file} is the config file in use`);
+    for (const f of ignored) warnOnce(`favseed: ${f} ignored: ${file} is the config file in use`);
     // Vite's base is the default when it is a path. './' (relative) and a URL (a CDN) say
     // where the bundle lives, not the path the icons are served under.
     const vitePath = /^\/(?!\/)/.test(viteBase) ? viteBase : null;
     if ((options.base ?? config.base) === undefined && vitePath === null) {
-      warnOnce(`favcon: Vite's base '${viteBase}' is not a path, so the icon links use '/'; set base in the favcon options to change it`);
+      warnOnce(`favseed: Vite's base '${viteBase}' is not a path, so the icon links use '/'; set base in the favseed options to change it`);
     }
     const merged = resolveOptions({ input: 'src/logo.svg', base: vitePath ?? '/' }, config, options);
     delete merged.out;
     merged.input = resolve(root, merged.input);
     if (dev) merged.mode = 'fast';
     if (merged.bg === undefined) {
-      warnOnce('favcon: bg not given, using #000000 for the padded icons (iOS composites transparent icons onto black)');
+      warnOnce('favseed: bg not given, using #000000 for the padded icons (iOS composites transparent icons onto black)');
     }
     // vite-plugin-pwa writes and links its own manifest.webmanifest.
     if (pwa && merged.manifest) {
-      warnOnce('favcon: vite-plugin-pwa writes the manifest, so favcon does not; pass favconIcons() to its manifest.icons');
+      warnOnce('favseed: vite-plugin-pwa writes the manifest, so favseed does not; pass favseedIcons() to its manifest.icons');
     }
     if (pwa) merged.manifest = false;
     const o = normaliseOptions(merged);
@@ -86,16 +86,16 @@ export default function favcon(options = {}) {
   /** The set for a mode's settings, from the cache when the key matches. */
   const setFor = (mode) => (sets[mode] ??= (async () => {
     const { merged } = await settingsFor(mode);
-    const source = await readFile(merged.input).catch(() => { throw new FavconError(`no such file: ${merged.input}`); });
-    const key = cacheKey({ version: favconVersion(), source, options: merged, engine: engineVersions() });
+    const source = await readFile(merged.input).catch(() => { throw new FavseedError(`no such file: ${merged.input}`); });
+    const key = cacheKey({ version: favseedVersion(), source, options: merged, engine: engineVersions() });
     const hit = await readSlot(cacheDir, key);
     if (hit) return hit;
-    const fresh = await buildFiles({ ...merged, onWarn: (m) => warnOnce(`favcon: ${m}`) });
+    const fresh = await buildFiles({ ...merged, onWarn: (m) => warnOnce(`favseed: ${m}`) });
     await writeSlot(cacheDir, key, fresh.files);
     return fresh.files;
   })());
 
-  /** True when public/ holds a different file under a name favcon emits. */
+  /** True when public/ holds a different file under a name favseed emits. */
   const clash = (f) => {
     if (!publicDir) return false;
     const p = join(publicDir, f.name);
@@ -103,14 +103,14 @@ export default function favcon(options = {}) {
   };
 
   return {
-    name: 'favcon',
+    name: 'favseed',
 
     configResolved(config) {
       root = config.root;
       publicDir = config.publicDir || null;
       viteBase = config.base;
       logger = config.logger;
-      cacheDir = join(root, 'node_modules', '.cache', 'favcon');
+      cacheDir = join(root, 'node_modules', '.cache', 'favseed');
       pwa = config.plugins.find((p) => p.name === PWA) ?? null;
     },
 
@@ -135,7 +135,7 @@ export default function favcon(options = {}) {
         const f = files.find((x) => x.name === name);
         if (!f) return next();
         if (clash(f)) {
-          warnOnce(`favcon: public/${f.name} exists and is not the file favcon builds; serving yours`);
+          warnOnce(`favseed: public/${f.name} exists and is not the file favseed builds; serving yours`);
           return next();
         }
         res.setHeader('Content-Type', TYPES[name.split('.').pop()]);
@@ -177,12 +177,12 @@ export default function favcon(options = {}) {
       // Here, not in generateBundle: an error here leaves the previous dist/ in place.
       for (const f of built) {
         if (clash(f)) {
-          this.error(`favcon: public/${f.name} exists and is not the file favcon builds. ` +
-            'Delete it to use favcon\'s, or remove the favcon plugin to keep yours.');
+          this.error(`favseed: public/${f.name} exists and is not the file favseed builds. ` +
+            'Delete it to use favseed\'s, or remove the favseed plugin to keep yours.');
         }
       }
       if (pwa?.api?.pwaAssetsGenerator && await pwa.api.pwaAssetsGenerator()) {
-        this.warn("favcon: vite-plugin-pwa's pwaAssets also writes favicon.ico and touch icons; turn one of them off");
+        this.warn("favseed: vite-plugin-pwa's pwaAssets also writes favicon.ico and touch icons; turn one of them off");
       }
     },
 

@@ -25,7 +25,7 @@ import { applyPalette, buildPalette, utils } from 'image-q';
 import { builtinPlugins, optimize } from 'svgo/browser';
 
 import {
-  APPLE_SIZE, createSvgStage, DEFAULT_BG, DEFAULT_COLORS, DEFAULT_SIZES, FavconError, ICO_SIZE,
+  APPLE_SIZE, createSvgStage, DEFAULT_BG, DEFAULT_COLORS, DEFAULT_SIZES, FavseedError, ICO_SIZE,
   icoWrap, linkTags, manifestJson, placeInSafeZone, squareIconSvg,
 } from '../../../lib/core.mjs';
 import { zip } from './zip.mjs';
@@ -121,19 +121,19 @@ export async function buildInBrowser(svgText, options = {}) {
     padding = 'auto';
   } else {
     if (!/^\d+(\.\d+)?$/.test(String(rawPadding))) {
-      throw new FavconError(`--padding must be 'auto' or a percentage 0-45, got '${rawPadding}'`);
+      throw new FavseedError(`--padding must be 'auto' or a percentage 0-45, got '${rawPadding}'`);
     }
     padding = Number(rawPadding);
-    if (padding < 0 || padding > 45) throw new FavconError("--padding must be 'auto' or a percentage 0-45");
+    if (padding < 0 || padding > 45) throw new FavseedError("--padding must be 'auto' or a percentage 0-45");
   }
   for (const s of sizes) {
     // Every size is placed in the safe zone with whole-pixel offsets, which needs an even
     // canvas: the same rule as the CLI.
-    if (!Number.isInteger(s) || s % 2 !== 0) throw new FavconError(`--sizes takes even pixel sizes, got '${s}'`);
+    if (!Number.isInteger(s) || s % 2 !== 0) throw new FavseedError(`--sizes takes even pixel sizes, got '${s}'`);
   }
 
   if (!/<svg[\s>]/i.test(svgText)) {
-    throw new FavconError('not an SVG (no <svg> element found)');
+    throw new FavseedError('not an SVG (no <svg> element found)');
   }
 
   // The CLI's order, step for step: the icon pass first, so a var() used only by an animation

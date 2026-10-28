@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Usage and examples
-    url: https://favcon.cevdet.ch
+    url: https://favseed.cevdet.ch
     about: Try the browser tool and read the CLI and integration examples.
   - name: Security reports
-    url: https://github.com/cevdetch/favcon/security/policy
+    url: https://github.com/cevdetch/favseed/security/policy
     about: Follow the security policy for sensitive findings.

@@ -11,6 +11,10 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Rename the unpublished project to Favseed: package, CLI, configuration files,
+  Astro/Vite imports and public API names. Existing local configurations must use
+  `favseed.config.*`; no optimisation settings or icon formats change.
+
 - Update repository and maintainer links to `cevdetch` and connect the package
   and website publisher to `https://cevdet.ch/`.
 
@@ -24,13 +28,13 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Added
 
-- **A website**, <https://favcon.cevdet.ch> (`site/`): favcon in the browser, client-side,
+- **A website**, <https://favseed.cevdet.ch> (`site/`): favseed in the browser, client-side,
   nothing uploaded. Astro, with a WASM raster stage (`@resvg/resvg-wasm`, `image-q`,
   `@jsquash/oxipng`) and a dependency-free zip writer. `logo.svg`, `icon.svg`,
   `site.webmanifest` and the safe-zone placement are byte-identical to the CLI's; the PNGs land
   within −6.1 % to +8.3 % of the CLI's at the defaults, and the page says so with the
   measurements rather than a disclaimer.
-- **`lib/core.mjs`**, favcon's isomorphic half (the svgo stage, the ICO container, the mask
+- **`lib/core.mjs`**, favseed's isomorphic half (the svgo stage, the ICO container, the mask
   maths, the manifest and the `<link>` block), imported by both the CLI and the website so the
   two cannot drift. Three seams make it portable: svgo is injected, the mask maths takes decoded
   pixels, and `icoWrap` works in `Uint8Array`. See decision 21.
@@ -53,27 +57,27 @@ minor at minimum, never patch.** Downstream users diff these files into git.
   `fit: { apple, icons }`, and `placeInSafeZone()` is exported so the test suite's reference
   places the mark the same way.
 
-- `favcon/astro`: an Astro integration. Builds in `astro:build:start` so Astro's ordinary
+- `favseed/astro`: an Astro integration. Builds in `astro:build:start` so Astro's ordinary
   `public/` copy carries the files to `outDir`: correct for static output and for every SSR
   adapter. Head tags via an `order: 'post'` middleware, a `<Head />` component, or logged for
   pasting.
-- A content-addressed build cache for the integration, keyed on favcon's version, the input
+- A content-addressed build cache for the integration, keyed on favseed's version, the input
   bytes, the canonicalised options **and** the versions of `@napi-rs/image` and `@gfx/zopfli`,
   so an engine upgrade invalidates it instead of serving stale bytes without notice.
 - The integration refuses to overwrite a file in `public/` it did not write itself, checked by
   content rather than by filename. A file that already matches what it was about to write is
   left alone, so a clean install does not accuse you of hand-editing your own favicon.
 - `build()`, `defineConfig()`, `optimiseSvg()`, `icoWrap()`, `engineVersions()` and
-  `FavconError` are exported, with types. `build()` throws; the CLI still exits.
-- **A config file.** `favcon.config.js`, `.mjs` or `.ts` in the working directory sets any
+  `FavseedError` are exported, with types. `build()` throws; the CLI still exits.
+- **A config file.** `favseed.config.js`, `.mjs` or `.ts` in the working directory sets any
   option, plus `input`, `base` and `mode`, which have no flag. Flags win; `--var` merges by
-  name. `defineConfig` is exported from `favcon` with types. `base` reaches the `--html` links
+  name. `defineConfig` is exported from `favseed` with types. `base` reaches the `--html` links
   and the manifest's icon URLs, and the summary names the mode.
-- **`favcon/vite`**, a Vite 8 plugin. Dev serves the set from memory in fast mode and rebuilds
+- **`favseed/vite`**, a Vite 8 plugin. Dev serves the set from memory in fast mode and rebuilds
   on change; a build emits the release set at the output root and links it in `index.html`;
-  `virtual:favcon` exports the links and the files. It never shadows a different file in
+  `virtual:favseed` exports the links and the files. It never shadows a different file in
   `public/`, shares the Astro integration's content-addressed cache, and leaves the manifest
-  to vite-plugin-pwa when that is present, with `favconIcons()` for its `manifest.icons`.
+  to vite-plugin-pwa when that is present, with `favseedIcons()` for its `manifest.icons`.
 - `test/run.mjs`: the definition of done as `node:test`, with a PNG reader and an accuracy
   gate written over `node:zlib`. No bash, no ImageMagick.
 - `bench/bench.mjs`: sweeps palette size, dither, stage order, zopfli iterations and the ICO
@@ -88,7 +92,7 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 - **One engine, nothing to install.** `@napi-rs/image` renders, quantises and recompresses,
   and `@gfx/zopfli` (WASM) finishes the winner, both pinned to exact versions, so
-  `npx favcon` needs Node 24 and no binaries. Renders are pixel-identical to `resvg -w N -h N`.
+  `npx favseed` needs Node 24 and no binaries. Renders are pixel-identical to `resvg -w N -h N`.
   Against the native resvg, pngquant and oxipng pipeline the PNGs are 3.6 % smaller over the
   fixtures (79 614 B against 82 605 B): 9.0 % smaller on the gradient, 0.46 % larger on the
   nine flat marks. Decision 26. The rasters stay one job at a time: parallel workers saved 13.5 %, short of the
@@ -117,14 +121,14 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 - `svgo` is imported rather than spawned, and the plugins are plain objects. Removes a temp
   config directory, ~110 lines of stringified plugin source, an env-var channel and two Node
   startups. Output is byte-identical.
-- Errors are prefixed `favcon:` (was `favicon.mjs:`).
+- Errors are prefixed `favseed:` (was `favicon.mjs:`).
 
 ### Fixed
 
 - **The Astro integration no longer adds a second set of icon links** to a page that already
   links one with a `rel` such as `alternate icon`. It checked for a `rel` that starts with
-  `icon`; favcon now looks for the `icon` keyword in any `<link>`'s `rel`, in the Astro
-  middleware and in `favcon/vite` alike.
+  `icon`; favseed now looks for the `icon` keyword in any `<link>`'s `rel`, in the Astro
+  middleware and in `favseed/vite` alike.
 
 - **`<desc>` no longer reaches `icon.svg` or `logo.svg`.** svgo's `removeDesc` keeps any
   description that is not empty or an editor stamp, unless told otherwise; `general.svg`'s
@@ -132,7 +136,7 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 - **A translucent `--bg` is refused.** The probe only checked that resvg parses the colour,
   so `transparent`, `rgba(…, 0)` and 8-digit hex passed, and the padded icons shipped with
-  alpha while the manifest declared them maskable. favcon now reads the probe's pixel and
+  alpha while the manifest declared them maskable. favseed now reads the probe's pixel and
   fails with a pointer to `--bg none`.
 
 - **A viewBox within 1 % of square is squared.** It used to be left alone, and resvg derived
@@ -157,7 +161,7 @@ minor at minimum, never patch.** Downstream users diff these files into git.
   failed build.
 - **An animated mark could not be built at all.** svgo 4.1.0 crashes with
   `Unmatched selector: %` on `@keyframes` nested inside another at-rule, the very shape the
-  animated-input contract requires. favcon hoists nested `@keyframes` to the top level of the
+  animated-input contract requires. favseed hoists nested `@keyframes` to the top level of the
   same stylesheet, where svgo's parser already skips them as it should.
 - **An animated `logo.svg` lost its animation without a warning.** `inlineStyles` deletes the
   `class` attribute it consumed without checking whether a media-guarded rule still selects it,
@@ -168,12 +172,12 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Removed
 
-- The `icotool` dependency. favcon writes the 22-byte ICO container itself, byte-identical to
+- The `icotool` dependency. favseed writes the 22-byte ICO container itself, byte-identical to
   `icotool -c -r` on every fixture. `icoutils` is now only a test-time nicety.
 - resvg, pngquant and oxipng as install requirements, with the `pngquant-bin` optional
-  dependency, the `FAVCON_RESVG`, `FAVCON_PNGQUANT` and `FAVCON_OXIPNG` overrides, and the
+  dependency, the `FAVSEED_RESVG`, `FAVSEED_PNGQUANT` and `FAVSEED_OXIPNG` overrides, and the
   `toolPath()` and `toolVersions()` exports. The native pipeline survives in `bench/` as the
   measured reference.
 
-[Unreleased]: https://github.com/cevdetch/favcon/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/cevdetch/favcon/releases/tag/v0.1.0
+[Unreleased]: https://github.com/cevdetch/favseed/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cevdetch/favseed/releases/tag/v0.1.0

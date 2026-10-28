@@ -33,7 +33,7 @@ jobs:
           require-lockfile: true
 
       # icoutils is here for one reason: so the ICO-equivalence test runs instead of skipping.
-      # It is not a dependency of the tool; favcon writes the 22-byte container itself.
+      # It is not a dependency of the tool; favseed writes the 22-byte container itself.
       - name: System packages
         run: sudo apt-get update && sudo apt-get install -y icoutils
 
@@ -120,7 +120,7 @@ jobs:
         with:
           runtime: node@24
           require-lockfile: true
-      - run: pnpm --filter favcon-site build
+      - run: pnpm --filter favseed-site build
       # The runner image ships Google Chrome, not a `chromium` binary.
       - run: node site/test/cdp-check.mjs
         env:

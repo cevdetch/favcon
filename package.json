@@ -1,5 +1,5 @@
 {
-  "name": "favcon",
+  "name": "favseed",
   "version": "0.1.0",
   "description": "One SVG in, an optimised favicon set out.",
   "type": "module",
@@ -9,12 +9,12 @@
     "url": "https://cevdet.ch/"
   },
   "bin": {
-    "favcon": "bin/favcon.mjs"
+    "favseed": "bin/favseed.mjs"
   },
   "exports": {
     ".": {
-      "types": "./bin/favcon.d.mts",
-      "default": "./bin/favcon.mjs"
+      "types": "./bin/favseed.d.mts",
+      "default": "./bin/favseed.mjs"
     },
     "./core": "./lib/core.mjs",
     "./vite": {
@@ -81,12 +81,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cevdetch/favcon.git"
+    "url": "git+https://github.com/cevdetch/favseed.git"
   },
   "bugs": {
-    "url": "https://github.com/cevdetch/favcon/issues"
+    "url": "https://github.com/cevdetch/favseed/issues"
   },
-  "homepage": "https://favcon.cevdet.ch",
+  "homepage": "https://favseed.cevdet.ch",
   "publishConfig": {
     "access": "public"
   },

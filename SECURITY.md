@@ -3,12 +3,12 @@
 ## Supported versions
 
 Security fixes target the current main branch and the latest published release
-of `favcon`. Older releases do not receive separate backports. When possible,
+of `favseed`. Older releases do not receive separate backports. When possible,
 check whether a finding still occurs on main or the latest release.
 
 ## Reporting a vulnerability
 
-For sensitive findings, use [GitHub private vulnerability reporting](https://github.com/cevdetch/favcon/security/advisories/new).
+For sensitive findings, use [GitHub private vulnerability reporting](https://github.com/cevdetch/favseed/security/advisories/new).
 If GitHub does not show a **Report a vulnerability** button, open an issue asking
 for a private reporting channel without including vulnerability details.
 

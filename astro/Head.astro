@@ -2,12 +2,12 @@
 // The opt-out. `head: 'component'` turns the middleware off and you place this yourself:
 //
 //   ---
-//   import Head from 'favcon/astro/Head.astro'
+//   import Head from 'favseed/astro/Head.astro'
 //   ---
 //   <html><head><Head /></head>...
 //
 // Same tags, same base prefix, no response rewriting. That suits you if you are
 // already assembling <head> from a layout and would rather see the tags in the source.
-import { links } from 'virtual:favcon';
+import { links } from 'virtual:favseed';
 ---
 <Fragment set:html={links} />

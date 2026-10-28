@@ -1,4 +1,4 @@
-// The content-addressed cache every host shares: node_modules/.cache/favcon/<sha256>/. A slot
+// The content-addressed cache every host shares: node_modules/.cache/favseed/<sha256>/. A slot
 // is written to a temp directory and renamed into place, so an interrupted build cannot leave
 // a half-populated slot that later reads as a hit.
 import { createHash } from 'node:crypto';
@@ -11,14 +11,14 @@ import { normaliseVars } from '../lib/core.mjs';
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
 let version = null;
-/** favcon's own version: a changed default is a minor release at least, so it is in the key. */
-export const favconVersion = () => (version ??=
+/** favseed's own version: a changed default is a minor release at least, so it is in the key. */
+export const favseedVersion = () => (version ??=
   JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version);
 
 /**
  * The cache key, and the reason the cache is safe to trust.
  *
- * favcon's own version, the input bytes, the canonicalised options, and the versions of
+ * favseed's own version, the input bytes, the canonicalised options, and the versions of
  * @napi-rs/image and @gfx/zopfli, because both change output bytes across releases, so a
  * cache keyed only on the SVG hands back stale files after an upgrade. vars are canonical
  * whether they arrive as an object or a Map (the merged options are a Map), and with or

@@ -6,7 +6,7 @@
     <path fill="#ca8a10" d="M352 32h128v128H352z"/>
   </g>
   <g font-family="Liberation Sans, DejaVu Sans, sans-serif" fill="#f4efe8">
-    <text x="470" y="300" font-size="112" font-weight="700" letter-spacing="-3">favcon</text>
+    <text x="470" y="300" font-size="112" font-weight="700" letter-spacing="-3">favseed</text>
     <text x="474" y="372" font-size="40" fill="#d8c8b4">One SVG in, an optimised</text>
     <text x="474" y="422" font-size="40" fill="#d8c8b4">favicon set out.</text>
   </g>

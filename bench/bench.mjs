@@ -15,7 +15,7 @@ import { cpus } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { build, engineVersions, icoWrap } from '../bin/favcon.mjs';
+import { build, engineVersions, icoWrap } from '../bin/favseed.mjs';
 import { DEFAULT_COLORS } from '../lib/core.mjs';
 import { reference, score } from '../test/lib/accuracy.mjs';
 import { decode } from '../test/lib/png.mjs';
@@ -46,7 +46,7 @@ const rawRenders = async () => {
   mkdirSync(dir, { recursive: true });
   const made = [];
   for (const m of MARKS) {
-    // Render from favcon's own icon.svg, so the sweeps measure the PNG pipeline in
+    // Render from favseed's own icon.svg, so the sweeps measure the PNG pipeline in
     // isolation rather than re-measuring svgo on every axis.
     const built = join(OUT, 'svg', m);
     await build({ input: join(FIXTURES, `${m}.svg`), out: built, sizes: [16], bg: null, zopfli: false });
@@ -211,11 +211,11 @@ sweeps.zopfli = async () => {
  *
  * Decision 13 says the rasters stay serial because oxipng already saturates the machine on
  * one file. A cross-tool comparison appeared to contradict it (favicon.sh renders four
- * sizes at once and finishes a like-for-like build in 12.5 s against favcon's 17.8 s), so
+ * sizes at once and finishes a like-for-like build in 12.5 s against favseed's 17.8 s), so
  * this re-runs the measurement under control.
  *
  * It crosses two axes on purpose, because the cross-tool gap confounds them: favicon.sh also
- * passes a bare `--zopfli`, which is `--zi 15`, where favcon passes `--zi 120`. Varying only
+ * passes a bare `--zopfli`, which is `--zi 15`, where favseed passes `--zi 120`. Varying only
  * the scheduling would have credited the iteration count to concurrency.
  *
  * The arms do identical work (same jobs, same commands, same order) and differ only in how
@@ -307,7 +307,7 @@ sweeps.concurrency = async () => {
   }
 
   const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
-  const shipped = mean(acc[0].wall);              // serial, --zi 120: what favcon does today
+  const shipped = mean(acc[0].wall);              // serial, --zi 120: what favseed does today
   const hasCpu = acc[0].cpu[0] !== null;
   const head = `${num('at once', 8)}${num('--zi', 6)}${num('wall', 9)}${num('min', 8)}${num('max', 8)}` +
                (hasCpu ? num('child cpu', 11) + num('cores', 8) : '') + num('bytes', 9) + num('vs shipped', 12);
@@ -325,7 +325,7 @@ sweeps.concurrency = async () => {
     note: `Four jobs (180 px on a ground, 192, 512 and the 32 px ICO payload) through the full ` +
           `pipeline. ${REPS} interleaved repetitions per arm, identical work in every arm, on a ` +
           `${cpus().length}-core machine. The --zi axis is here because favicon.sh passes a bare ` +
-          `--zopfli (which is --zi 15) where favcon passes --zi 120, and a comparison that varied ` +
+          `--zopfli (which is --zi 15) where favseed passes --zi 120, and a comparison that varied ` +
           `only the scheduling would have credited that to concurrency.`,
     text: [head, ...body].join('\n'),
     summary: `concurrency buys ${((1 - conc120 / shipped) * 100).toFixed(1)} % at --zi 120; ` +
@@ -356,7 +356,7 @@ sweeps.ico = async () => {
     } catch { haveIcotool = false; }
   }
   return { title: 'The ICO container',
-           note: 'A PNG payload against icotool\'s default BMP one, and favcon\'s 22-byte writer against `icotool -c -r`.',
+           note: 'A PNG payload against icotool\'s default BMP one, and favseed\'s 22-byte writer against `icotool -c -r`.',
            text: [`raw PNG payload       ${png} B`,
                   ...(haveIcotool ? [
                     `BMP payload           ${bmp} B  (${(bmp / png).toFixed(1)}x)`,
@@ -366,7 +366,7 @@ sweeps.ico = async () => {
 
 // The native pipeline against the engine, on the same raw renders: what decision 26 rests on.
 sweeps.engine = async () => {
-  const { loadEngine } = await import('../bin/favcon.mjs');
+  const { loadEngine } = await import('../bin/favseed.mjs');
   const engine = await loadEngine();
   const raws = await rawRenders();
   const dir = join(OUT, 'engine');
@@ -406,13 +406,13 @@ sweeps.engine = async () => {
 // WASM zopfli runs on one thread, unlike oxipng, so decision 13's reason may not hold.
 sweeps.parallel = async () => {
   const { Worker } = await import('node:worker_threads');
-  const { loadEngine } = await import('../bin/favcon.mjs');
+  const { loadEngine } = await import('../bin/favseed.mjs');
   const engine = await loadEngine();
   const raws = (await rawRenders()).filter((r) => r.mark === 'general');
   const encs = await Promise.all(raws.map(async (r) => engine.encode(readFileSync(r.file), { colors: DEFAULT_COLORS })));
   const worker = `
     const { parentPort, workerData } = require('node:worker_threads');
-    import('${new URL('../bin/favcon.mjs', import.meta.url).href}').then(async ({ loadEngine }) => {
+    import('${new URL('../bin/favseed.mjs', import.meta.url).href}').then(async ({ loadEngine }) => {
       const e = await loadEngine();
       parentPort.postMessage((await e.finish(workerData, { iterations: 120 })).length);
     });`;

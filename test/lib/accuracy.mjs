@@ -14,7 +14,7 @@
 // through the large sizes or fail every small one.
 
 import { readFileSync } from 'node:fs';
-import { loadEngine, placeInSafeZone } from '../../bin/favcon.mjs';
+import { loadEngine, placeInSafeZone } from '../../bin/favseed.mjs';
 import { decode } from './png.mjs';
 import { resolveVars } from './resolve.mjs';
 
@@ -22,12 +22,12 @@ export const THRESHOLD_PCT = 1.0;
 const CHANNEL_TOLERANCE = 8;      // out of 255
 
 /**
- * An unquantised render of the var-resolved SOURCE, not of favcon's icon.svg. Comparing
+ * An unquantised render of the var-resolved SOURCE, not of favseed's icon.svg. Comparing
  * against the optimised SVG would make the gate blind to the very thing it exists to measure:
  * the error floatPrecision introduces before a rasteriser is ever involved.
  *
  * `fitted: true` is the reference for a padded icon (apple-touch-icon.png, icon-<size>.png):
- * the same source placed in the safe zone at `px` by favcon's own placeInSafeZone, measured on
+ * the same source placed in the safe zone at `px` by favseed's own placeInSafeZone, measured on
  * the SOURCE's renders. `padding` must match the build's, or the gate scores a placement
  * difference as pixel error.
  * The placement is shared on purpose (the gate is about pixels, not about re-deriving where
@@ -36,7 +36,7 @@ const CHANNEL_TOLERANCE = 8;      // out of 255
 export async function reference({ source, px, bg, vars, fitted = false, padding = 'auto' }) {
   const engine = await loadEngine();
   let svg = resolveVars(readFileSync(source, 'utf8'), vars);
-  // Match what favcon does to a non-square mark, so the gate measures quantisation error
+  // Match what favseed does to a non-square mark, so the gate measures quantisation error
   // rather than the framing difference it would otherwise see at every pixel.
   const vb = /\bviewBox\s*=\s*"([^"]*)"/.exec(svg);
   if (vb) {
