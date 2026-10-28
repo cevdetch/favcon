@@ -440,12 +440,13 @@ const main = async () => {
   const args = process.argv.slice(2);
   const write = args.includes('--write');
   const want = args.filter((a) => !a.startsWith('--'));
-  const names = want.length ? want : Object.keys(sweeps);
-  for (const n of names) if (!sweeps[n]) { process.stderr.write(`bench: no sweep '${n}'\n`); process.exit(1); }
+  const available = new Map(Object.entries(sweeps));
+  const names = want.length ? want : [...available.keys()];
+  for (const n of names) if (!available.has(n)) { process.stderr.write(`bench: no sweep '${n}'\n`); process.exit(1); }
 
   // A partial --write would truncate the document to whichever sweeps ran, without a warning,
   // which is worse than not writing at all: the file claims to be the current state of every axis.
-  if (write && names.length !== Object.keys(sweeps).length) {
+  if (write && names.length !== available.size) {
     process.stderr.write('bench: --write needs every sweep; drop the sweep names or drop --write\n');
     process.exit(1);
   }
@@ -458,7 +459,7 @@ const main = async () => {
   const results = [];
   for (const n of names) {
     process.stderr.write(`bench: ${n}...\n`);
-    const r = await sweeps[n]();
+    const r = await available.get(n)();
     results.push({ name: n, ...r });
     process.stdout.write(`\n## ${r.title}\n\n${r.text}\n${r.summary ? '\n' + r.summary + '\n' : ''}`);
   }
