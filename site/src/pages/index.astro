@@ -1,6 +1,6 @@
 ---
 // Static page, client-side pipeline. The only reason this is Astro rather than a lone HTML file
-// is that the pipeline imports lib/core.mjs and three WASM packages, and something has to
+// is that the pipeline imports the shared engine and WASM packages, and something has to
 // resolve and bundle them.
 import '../styles/app.css';
 
@@ -89,7 +89,12 @@ const outputs = [
       <small>Percent per side, or <code>auto</code> to measure the mark.</small>
     </label>
     <label><input type="checkbox" name="animation" checked /> Keep the animation in <code>logo.svg</code></label>
-    <button>Generate</button>
+    <label>Build mode
+      <select name="mode"><option value="release">Release — smallest files</option><option value="fast">Fast — quicker compression</option></select>
+      <small>Matches the CLI's <code>--mode</code>. Fast files can be larger.</small>
+    </label>
+    <button type="submit">Generate</button>
+    <button type="button" id="cancel" hidden>Cancel</button>
     <output aria-live="polite"></output>
   </form>
 
@@ -116,51 +121,16 @@ const outputs = [
   </section>
 
   <aside>
-    <h2>These bytes are not the CLI's bytes</h2>
-    <p>
-      <strong>The SVGs are exact.</strong> This page runs the same svgo plugin list as the
-      command line tool, imported from the same file, so <code>logo.svg</code>, <code>icon.svg</code> and
-      the <code>site.webmanifest</code> come out byte-identical. The mark is placed in the masked
-      icons by the same fit-and-snap search, so it lands on the same pixel. The 22-byte
-      container of <code>favicon.ico</code> is the same code too, but its payload is a PNG, so
-      the file differs by whatever the PNG differs by.
-    </p>
-    <p>
-      <strong>The PNGs differ</strong>, because this page still runs its own substitutes for the
-      CLI's image engine:
-    </p>
-    <div>
-      <table>
-        <thead><tr><th>stage</th><th>command line</th><th>this page</th></tr></thead>
-        <tbody>
-          <tr><td>render</td><td>resvg 0.48.1, in <code>@napi-rs/<wbr />image</code></td><td><code>@resvg/<wbr />resvg-wasm</code> 2.6.2</td></tr>
-          <tr><td>quantise</td><td><code>@napi-rs/<wbr />image</code>'s quantiser</td><td><code>image-q</code>, a different algorithm</td></tr>
-          <tr><td>recompress</td><td>oxipng, then <code>@gfx/<wbr />zopfli</code> at 120 iterations</td><td><code>@jsquash/<wbr />oxipng</code> level 6 (<strong>no zopfli</strong>)</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p>Measured over four fixtures at the defaults, PNG bytes only:</p>
-    <div>
-      <table>
-        <thead><tr><th>mark</th><th>CLI</th><th>here</th><th></th></tr></thead>
-        <tbody>
-          <tr><td>flat, pixel grid</td><td>600&nbsp;B</td><td>620&nbsp;B</td><td>+3.3%</td></tr>
-          <tr><td>dense geometry</td><td>5343&nbsp;B</td><td>5043&nbsp;B</td><td>−5.6%</td></tr>
-          <tr><td>two-colour mark</td><td>4959&nbsp;B</td><td>5079&nbsp;B</td><td>+2.4%</td></tr>
-          <tr><td>radial gradient</td><td>25946&nbsp;B</td><td>29642&nbsp;B</td><td>+14.2%</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p>
-      Within a few percent on the three flat marks and 14.2&nbsp;% larger on the gradient: the
-      missing zopfli costs bytes, and a different quantiser can win some back, as it does on the
-      dense mark. Close is not the same, though,
-      and it is why this page will not tell you what your icons will weigh.
-    </p>
-    <p>
-      Treat this as a preview you can see and click. For bytes you can measure, reproduce and
-      diff into git, run <code>npx favseed logo.svg</code>.
-    </p>
+    <h2>The same files as the CLI</h2>
+    <p>This page runs the same pinned image engine and build pipeline as the command line.
+      Matching SVG, options, and build mode produce identical SVG, PNG, ICO, and manifest
+      files. Builds run in a worker so the page stays responsive; Cancel stops the build.</p>
+    <p>Release mode uses the CLI's full compression. Fast mode matches <code>--mode fast</code>
+      and trades some file size for build time. This page includes a manifest; use
+      <code>--manifest</code> for the matching CLI set.</p>
+    <p>The engine loads after you choose a file. Its WASM is about 10.3 MB before transfer
+      compression and starts with 250 MiB of shared memory. A recent browser on HTTPS with
+      cross-origin isolation is required. Your SVG and generated files stay in this tab.</p>
   </aside>
 </main>
 
@@ -174,19 +144,17 @@ const outputs = [
   const $ = (id) => document.getElementById(id);
   const form = document.querySelector('form');
   const { file } = form.elements;
-  const drop = file.labels[0], go = form.querySelector('button'), status = form.querySelector('output');
+  const drop = file.labels[0], go = form.querySelector('button[type=submit]'), status = form.querySelector('output');
+  const cancel = $('cancel');
   const TYPES = { svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon', webmanifest: 'application/manifest+json' };
-  let urls = [];
+  let urls = [], active;
 
   const say = (msg, kind = '') => { status.textContent = msg; status.className = kind; };
 
-  // The pipeline is 185 KB of gzipped JS (svgo, image-q, the jsquash glue) plus a 2.4 MB resvg
-  // WASM, and no visitor needs either before choosing a file. Both start loading the moment one
-  // is chosen, overlapping the time spent on the options. A failed import is forgotten, so the
-  // next attempt retries rather than replaying the same rejection.
+  // Fetch the engine only after choosing a file, overlapping initialization with options.
   let pipeline;
   const load = () => (pipeline ??= import('../lib/pipeline.mjs').then(
-    (m) => { m.warm(); return m; },
+    (m) => { m.warm().catch(() => {}); return m; },
     (e) => { pipeline = null; throw e; },
   ));
 
@@ -208,18 +176,22 @@ const outputs = [
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    active?.abort();
+    const controller = new AbortController();
+    active = controller;
     const data = new FormData(form);
     go.disabled = true;
+    cancel.hidden = false;
     say('Building…');
-    for (const u of urls) URL.revokeObjectURL(u);
-    urls = [];
+    const nextUrls = [];
     const url = (bytes, type) => {
       const u = URL.createObjectURL(new Blob([bytes], { type }));
-      urls.push(u);
+      nextUrls.push(u);
       return u;
     };
     try {
       const { buildInBrowser } = await load();
+      controller.signal.throwIfAborted();
       const t0 = performance.now();
       const built = await buildInBrowser(await data.get('file').text(), {
         colors: data.get('colors'),
@@ -227,7 +199,16 @@ const outputs = [
         bg: data.get('bg').trim(),
         padding: data.get('padding').trim(),
         animation: data.has('animation'),
+        mode: data.get('mode'),
+      }, {
+        signal: controller.signal,
+        onProgress: ({ phase, completed, total }) => {
+          if (active !== controller || controller.signal.aborted) return;
+          say(phase === 'placement' ? 'Placing the mark…' : phase === 'complete'
+            ? 'Preparing downloads…' : `Building images… ${completed}/${total}`);
+        },
       });
+      controller.signal.throwIfAborted();
       const ms = Math.round(performance.now() - t0);
 
       // Every name comes from the pipeline's fixed list, never from the visitor's file.
@@ -249,12 +230,28 @@ const outputs = [
       $('links').textContent = built.links.trim();
       $('zip').href = url(built.archive(), 'application/zip');
       $('result').hidden = false;
+      for (const u of urls) URL.revokeObjectURL(u);
+      urls = nextUrls;
       say(`Done in ${ms} ms. ${built.animated ? 'logo.svg keeps its animation.' : 'The source is static.'}`, 'good');
     } catch (e) {
-      say(e?.message ?? String(e), 'bad');
+      for (const u of nextUrls) URL.revokeObjectURL(u);
+      if (active === controller) say(e?.name === 'AbortError' ? 'Cancelled.' : e?.message ?? String(e), e?.name === 'AbortError' ? '' : 'bad');
     } finally {
-      go.disabled = false;
+      if (active === controller) {
+        active = undefined;
+        go.disabled = false;
+        cancel.hidden = true;
+      }
     }
+  });
+  cancel.addEventListener('click', () => {
+    active?.abort();
+    pipeline?.then((m) => m.dispose()).catch(() => {});
+  });
+  window.addEventListener('pagehide', () => {
+    active?.abort();
+    pipeline?.then((m) => m.dispose()).catch(() => {});
+    for (const u of urls) URL.revokeObjectURL(u);
   });
 </script>
 </body>

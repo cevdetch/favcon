@@ -28,12 +28,11 @@ const crc32 = (bytes) => {
  * `files` is [{ name, bytes }]. Returns a Uint8Array.
  *
  * The DOS timestamp is fixed rather than taken from the clock, so downloading the same mark
- * twice gives the same archive byte for byte. That is the same property the CLI's output has,
- * and the only part of it this page can keep without misrepresenting the bytes.
+ * twice gives the same archive byte for byte, as well as the same files as the CLI.
  */
 export const zip = (files) => {
   const enc = new TextEncoder();
-  const DOS_TIME = 0x0000, DOS_DATE = 0x2100;   // 1 Jan 1980, midnight
+  const DOS_TIME = 0x0000, DOS_DATE = 0x0021;   // 1 Jan 1980, midnight
   const locals = [];
   const central = [];
   let offset = 0;

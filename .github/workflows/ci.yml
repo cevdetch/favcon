@@ -120,6 +120,7 @@ jobs:
         with:
           runtime: node@24
           require-lockfile: true
+      - run: pnpm --filter favseed-site test
       - run: pnpm --filter favseed-site build
       # The runner image ships Google Chrome, not a `chromium` binary.
       - run: node site/test/cdp-check.mjs

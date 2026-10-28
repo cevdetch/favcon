@@ -21,54 +21,58 @@ pngquant --force --speed 1 --nofs --colors 16 --output /tmp/og-q.png /tmp/og.png
 oxipng -q -o max -s --zopfli -a --out public/og.png /tmp/og-q.png
 ```
 
-## What it shares with the CLI
+## One engine and identical output
 
-Everything in [`lib/core.mjs`](../lib/core.mjs), imported rather than copied: the four
-svgo plugins, the safe-zone placement, the ICO container, the manifest and the `<link>` block.
-`svgo` has a browser build that exports the same `optimize` and `builtinPlugins`, so **the SVG
-stage is the same code with the same plugin list**: `icon.svg` and `logo.svg` come out
-byte-identical to the CLI's.
+The browser imports the same `lib/core.mjs`, `lib/config.mjs`, `lib/engine.mjs`, and
+`lib/pipeline.mjs` as the CLI. The host adapters inject native or WASI
+`@napi-rs/image` 1.15.0, `@gfx/zopfli` 1.0.15, SVGO, and a deflate decoder.
+Matching source, normalized options, and mode produce identical files, links, and placement.
+The browser includes a manifest by default; the CLI needs `--manifest` to match.
 
-## What it cannot share, and what that costs
+Release mode uses 120 Zopfli iterations; fast mode uses 15, matching `--mode fast`.
+Both run in a dedicated module worker, keeping the page responsive. Cancel terminates the
+worker and its children. The previous successful downloads remain usable after a failed or
+cancelled build. One completed set is cached in memory, at most 16 MiB, with owned copies;
+no source or result is persisted or uploaded.
 
-The CLI's image engine, for now. This page runs WASM substitutes, which are not the same
-programs:
+## Loading and hosting requirements
 
-| stage | CLI | here | consequence |
-|---|---|---|---|
-| render | resvg 0.48.1, in `@napi-rs/image` | `@resvg/resvg-wasm` 2.6.2 | a different resvg version |
-| quantise | `@napi-rs/image`'s quantiser | `image-q` | a different algorithm |
-| recompress | oxipng, then `@gfx/zopfli` at 120 iterations | `@jsquash/oxipng` level 6 | **no zopfli** |
+The WASM asset is 10,322,976 bytes before transfer compression, and the upstream loader starts
+with 250 MiB of shared memory. Loading is lazy, after selecting an SVG. This improves page
+responsiveness and repeated builds, but does not promise lower startup cost or memory use.
+See [measurements](../docs/BROWSER-PARITY.md) for size and timing tradeoffs.
 
-Measured in headless Chromium against the CLI on the same marks, same options
-(the defaults: `--colors 256 --sizes "192 512" --bg '#000000'`), 2026-10-05:
+Use HTTPS (or localhost), SharedArrayBuffer, DecompressionStream, and cross-origin isolation.
+The build writes Cloudflare Pages `_headers` with COOP `same-origin`, COEP `require-corp`,
+and CORP `same-origin` for documents and assets. Other hosts must supply equivalent response
+headers, including worker responses. Astro dev and preview use the same headers.
+Unsupported environments get a clear CLI alternative instead of a different encoder.
 
-| fixture | logo.svg | icon.svg | manifest | placement | PNG bytes |
-|---|---|---|---|---|---|
-| `tiles` | exact | exact | exact | identical | 600 → 620 (+3.3%) |
-| `heavy` | exact | exact | exact | identical | 5343 → 5043 (−5.6%) |
-| `general` | exact | exact | exact | identical | 4959 → 5079 (+2.4%) |
-| `gradient` | exact | exact | exact | identical | 25946 → 29642 (+14.2%) |
-
-So the SVGs, the manifest and the safe-zone placement are exact, and the PNGs land within a
-few percent of the CLI's on the flat marks and 14.2 % larger on the gradient: the missing
-zopfli costs bytes, and `image-q` sometimes wins some back. (At the old default of 8 colours the gradient more than doubled here; the gap
-was the two quantisers disagreeing about which 8 colours to keep.) Close is not identical, so
-this page still cannot tell you what your icons will weigh.
-
-`image-q` is used rather than a libimagequant WASM build on purpose: libimagequant is GPL-3.0+,
-and linking it would make this GPL-3 (see "Licence" in the README).
+`build/zopfli-browser.mjs` fixes the pinned package's generated CommonJS glue: it exports
+its runtime only in Node, so browser callbacks would otherwise queue forever. The transform
+exports that same runtime for browser builds and dependency optimization; it does not change
+the embedded WASM or compression settings. Native/browser file hashes cover the result.
 
 ## Verifying it
 
+From the repository root:
+
 ```sh
-pnpm build
-node test/cdp-check.mjs      # runs the real pipeline in headless Chromium over four fixtures
+pnpm --filter favseed-site test
+pnpm --filter favseed-site build
+node site/test/cdp-check.mjs
 ```
 
-`test/cdp-check.mjs` serves `dist/` from inside its own process and drives Chromium over the
-DevTools protocol with Node's built-in `WebSocket`: no Playwright, no stray listener. It checks
-PNG and ICO magic bytes, not only byte counts, because a broken pipeline still produces files of
-a plausible size. `/check` is the page it drives; open it in a normal browser to watch.
+The harness serves `dist/` with the required headers and drives real Chromium through Node's
+built-in DevTools WebSocket. It compares every file hash and shared metadata against native
+builds over eleven fast-mode fixtures, two release-mode fixtures, and custom option cases.
+It also checks ZIP contents, cache mutation/transfer ownership, page responsiveness, missing
+isolation, cancellation, retry, nested-worker termination, and preservation of form downloads.
+`/check` supplies the test API; fixtures and native references are supplied by the Node harness.
+
 The browser command defaults to `chromium`; set `CHROME=google-chrome` to use Google Chrome.
-Only these two command names are accepted, and the selected browser must be on `PATH`.
+Only these command names are accepted, and the browser must be on `PATH`.
+`FAVSEED_SMOKE=1` runs a shorter matrix with all lifecycle checks.
+`FAVSEED_BENCH=1` measures initialization and four release-mode fixtures.
+To exercise an already-running dev or preview server, set
+`FAVSEED_ORIGIN=http://127.0.0.1:4321` (only local HTTP origins are accepted).
