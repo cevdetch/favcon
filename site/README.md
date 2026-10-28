@@ -1,18 +1,18 @@
-# favcon, in the browser
+# favseed, in the browser
 
-The third of the three: the [CLI](../bin/favcon.mjs), the [Astro integration](../astro/), and
+The third of the three: the [CLI](../bin/favseed.mjs), the [Astro integration](../astro/), and
 this. Drop an SVG, get the set, nothing leaves the tab.
 
 ```sh
-pnpm install && pnpm --filter favcon-site dev   # from the repo root
+pnpm install && pnpm --filter favseed-site dev   # from the repo root
 ```
 
-Deployed to <https://favcon.cevdet.ch> by Cloudflare Pages from `main` (settings in
+Deployed to <https://favseed.cevdet.ch> by Cloudflare Pages from `main` (settings in
 [RELEASING.md](../RELEASING.md)). `trailingSlash: 'never'` with `build.format: 'file'` serves
 slash-free URLs without a redirect; `404.astro` must exist, or Pages answers every unknown path
 with the home page and a 200.
 
-The site's own icons in `public/` are favcon's output for `public/logo.svg`. The Open Graph
+The site's own icons in `public/` are favseed's output for `public/logo.svg`. The Open Graph
 card is `src/og/og.svg`, rendered with the same three tools:
 
 ```sh

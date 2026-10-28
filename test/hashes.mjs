@@ -6,10 +6,10 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from '../bin/favcon.mjs';
+import { build } from '../bin/favseed.mjs';
 
 const MARKS = ['general', 'flat', 'second', 'mask', 'heavy', 'animated', 'tiles', 'wide', 'gradient', 'smil', 'dark'];
-const dir = mkdtempSync(join(tmpdir(), 'favcon-hashes.'));
+const dir = mkdtempSync(join(tmpdir(), 'favseed-hashes.'));
 try {
   for (const m of MARKS) {
     const out = join(dir, m);

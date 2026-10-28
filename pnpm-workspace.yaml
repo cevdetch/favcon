@@ -7,6 +7,6 @@ packages:
 # recorded "no", not an oversight: pnpm otherwise fails the install asking to be told.
 #
 #   sharp: no. Astro's image service; the site has no <Image> and no raster assets to
-#   transform, and its icons are built by favcon itself.
+#   transform, and its icons are built by favseed itself.
 allowBuilds:
   sharp: false

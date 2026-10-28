@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { crc32 } from 'node:zlib';
 
-import { loadEngine, optimiseSvg } from '../bin/favcon.mjs';
+import { loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { squareIconSvg } from '../lib/core.mjs';
 import { createEngine, wrapForSize } from '../lib/engine.mjs';
 import { score } from './lib/accuracy.mjs';
@@ -17,7 +17,7 @@ import { decode } from './lib/png.mjs';
 const FIX = new URL('./fixtures/', import.meta.url);
 const icon = (name) =>
   squareIconSvg(optimiseSvg(readFileSync(new URL(`${name}.svg`, FIX), 'utf8'), { icon: true }).data).data;
-const scratch = mkdtempSync(join(tmpdir(), 'favcon-engine.'));
+const scratch = mkdtempSync(join(tmpdir(), 'favseed-engine.'));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 const engine = await loadEngine();
 

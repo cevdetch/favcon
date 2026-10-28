@@ -13,7 +13,7 @@
 // cost of putting the tags where the browser looks for them rather than where a script can
 // reach; `head: 'component'` avoids the cost in full by letting you place <Head /> yourself.
 
-import { links } from 'virtual:favcon';
+import { links } from 'virtual:favseed';
 
 import { declaresIcon } from '../lib/core.mjs';
 

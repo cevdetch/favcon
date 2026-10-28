@@ -9,10 +9,10 @@ import { after, describe, it } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
-import { FavconError } from '../lib/core.mjs';
+import { FavseedError } from '../lib/core.mjs';
 import { checkConfig, CONFIG_KEYS, defineConfig, normaliseOptions, resolveOptions } from '../lib/config.mjs';
 
-const fails = (fn, re) => assert.throws(fn, (e) => e instanceof FavconError && re.test(e.message));
+const fails = (fn, re) => assert.throws(fn, (e) => e instanceof FavseedError && re.test(e.message));
 
 describe('normaliseOptions', () => {
   it('fills the defaults', () => {
@@ -92,13 +92,13 @@ describe('checkConfig', () => {
 
   it('refuses a default export that is not an object', () => {
     for (const bad of [undefined, null, 3, 'x', [1]]) {
-      fails(() => checkConfig(bad, 'favcon.config.mjs'), /^favcon\.config\.mjs must export an object as its default export$/);
+      fails(() => checkConfig(bad, 'favseed.config.mjs'), /^favseed\.config\.mjs must export an object as its default export$/);
     }
   });
 
   it('names every unknown key and the keys it accepts', () => {
-    fails(() => checkConfig({ colours: 8, quiet: true }, 'favcon.config.mjs'),
-      /^favcon\.config\.mjs: unknown options 'colours', 'quiet'; the options are input, out, colors, sizes, bg, padding, vars, animation, manifest, mode, base$/);
+    fails(() => checkConfig({ colours: 8, quiet: true }, 'favseed.config.mjs'),
+      /^favseed\.config\.mjs: unknown options 'colours', 'quiet'; the options are input, out, colors, sizes, bg, padding, vars, animation, manifest, mode, base$/);
   });
 
   it('defineConfig returns what it was given', () => {
@@ -108,9 +108,9 @@ describe('checkConfig', () => {
 });
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const CLI = join(ROOT, 'bin', 'favcon.mjs');
+const CLI = join(ROOT, 'bin', 'favseed.mjs');
 const execFileAsync = promisify(execFile);
-const scratch = mkdtempSync(join(tmpdir(), 'favcon-config.'));
+const scratch = mkdtempSync(join(tmpdir(), 'favseed-config.'));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 let n = 0;
 
@@ -139,7 +139,7 @@ const noStack = (r) => assert.ok(!/at .*\.m?[jt]s:\d+/.test(r.stderr), `a stack 
 
 describe('the CLI with a config file', () => {
   it('builds from the config alone and names the mode', async () => {
-    const dir = project({ 'favcon.config.mjs': `export default { ${FAST} };` });
+    const dir = project({ 'favseed.config.mjs': `export default { ${FAST} };` });
     const r = await run(dir);
     assert.equal(r.code, 0, r.stderr);
     for (const f of ['logo.svg', 'icon.svg', 'favicon.ico', 'apple-touch-icon.png', 'icon-32.png']) {
@@ -150,7 +150,7 @@ describe('the CLI with a config file', () => {
   });
 
   it('lets a flag win over the config', async () => {
-    const dir = project({ 'favcon.config.mjs': `export default { ${FAST.replace('[32]', '[64]')} };` });
+    const dir = project({ 'favseed.config.mjs': `export default { ${FAST.replace('[32]', '[64]')} };` });
     const r = await run(dir, ['--sizes', '32']);
     assert.equal(r.code, 0, r.stderr);
     assert.ok(existsSync(join(dir, 'public', 'icon-32.png')));
@@ -158,7 +158,7 @@ describe('the CLI with a config file', () => {
   });
 
   it('merges --var over the config vars by name', async () => {
-    const dir = project({ 'favcon.config.mjs': `export default { ${FAST}, vars: { ground: '#123456' } };` });
+    const dir = project({ 'favseed.config.mjs': `export default { ${FAST}, vars: { ground: '#123456' } };` });
     assert.equal((await run(dir)).code, 0);
     assert.match(read(dir, 'icon.svg'), /#123456/i);
     assert.equal((await run(dir, ['--var', 'ground=#654321'])).code, 0);
@@ -167,7 +167,7 @@ describe('the CLI with a config file', () => {
   });
 
   it('puts base into --html and the manifest', async () => {
-    const dir = project({ 'favcon.config.mjs': `export default { ${FAST}, base: 'blog' };` });
+    const dir = project({ 'favseed.config.mjs': `export default { ${FAST}, base: 'blog' };` });
     const r = await run(dir, ['--html', '--manifest']);
     assert.equal(r.code, 0, r.stderr);
     assert.match(r.stdout, /<link rel="icon" href="\/blog\/favicon\.ico" sizes="32x32">/);
@@ -176,7 +176,7 @@ describe('the CLI with a config file', () => {
   });
 
   it('keeps the config manifest members under --manifest', async () => {
-    const dir = project({ 'favcon.config.mjs': `export default { ${FAST}, manifest: { name: 'Example' } };` });
+    const dir = project({ 'favseed.config.mjs': `export default { ${FAST}, manifest: { name: 'Example' } };` });
     assert.equal((await run(dir, ['--manifest'])).code, 0);
     const m = JSON.parse(read(dir, 'site.webmanifest'));
     assert.equal(m.name, 'Example');
@@ -184,59 +184,59 @@ describe('the CLI with a config file', () => {
   });
 
   it('loads a .js config written as ESM in a project with no package.json type', async () => {
-    const dir = project({ 'favcon.config.js': `export default { ${FAST} };` });
+    const dir = project({ 'favseed.config.js': `export default { ${FAST} };` });
     const r = await run(dir);
     assert.equal(r.code, 0, r.stderr);
   });
 
   it('loads a .ts config through type stripping', async () => {
-    const dir = project({ 'favcon.config.ts': `const sizes: number[] = [32];\nexport default { input: 'logo.svg', out: 'public', sizes, mode: 'fast' as const, bg: '#000000' };` });
+    const dir = project({ 'favseed.config.ts': `const sizes: number[] = [32];\nexport default { input: 'logo.svg', out: 'public', sizes, mode: 'fast' as const, bg: '#000000' };` });
     const r = await run(dir);
     assert.equal(r.code, 0, r.stderr);
     assert.ok(existsSync(join(dir, 'public', 'icon-32.png')));
   });
 
-  it('names favcon.config.mjs when Node cannot load a .ts config', async () => {
-    const dir = project({ 'favcon.config.ts': `enum Size { Small = 32 }\nexport default { input: 'logo.svg', sizes: [Size.Small] };` });
+  it('names favseed.config.mjs when Node cannot load a .ts config', async () => {
+    const dir = project({ 'favseed.config.ts': `enum Size { Small = 32 }\nexport default { input: 'logo.svg', sizes: [Size.Small] };` });
     const r = await run(dir);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: favcon\.config\.ts could not be loaded: /m);
-    assert.match(r.stderr, /write favcon\.config\.mjs instead/);
+    assert.match(r.stderr, /^favseed: favseed\.config\.ts could not be loaded: /m);
+    assert.match(r.stderr, /write favseed\.config\.mjs instead/);
     noStack(r);
   });
 
   it('refuses an unknown key, naming it', async () => {
-    const dir = project({ 'favcon.config.mjs': `export default { ${FAST}, colours: 8 };` });
+    const dir = project({ 'favseed.config.mjs': `export default { ${FAST}, colours: 8 };` });
     const r = await run(dir);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: favcon\.config\.mjs: unknown option 'colours'; the options are /m);
+    assert.match(r.stderr, /^favseed: favseed\.config\.mjs: unknown option 'colours'; the options are /m);
     assert.ok(!existsSync(join(dir, 'public')), 'a failed run wrote output');
     noStack(r);
   });
 
   it('refuses a config that does not export an object', async () => {
-    const dir = project({ 'favcon.config.mjs': 'export default 42;' });
+    const dir = project({ 'favseed.config.mjs': 'export default 42;' });
     const r = await run(dir);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: favcon\.config\.mjs must export an object as its default export$/m);
+    assert.match(r.stderr, /^favseed: favseed\.config\.mjs must export an object as its default export$/m);
   });
 
   it('reports a config that throws, without a stack trace', async () => {
-    const dir = project({ 'favcon.config.mjs': "throw new Error('broken on purpose');" });
+    const dir = project({ 'favseed.config.mjs': "throw new Error('broken on purpose');" });
     const r = await run(dir);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: favcon\.config\.mjs could not be loaded: broken on purpose$/m);
+    assert.match(r.stderr, /^favseed: favseed\.config\.mjs could not be loaded: broken on purpose$/m);
     noStack(r);
   });
 
   it('uses the first config file and warns about the others', async () => {
     const dir = project({
-      'favcon.config.js': `export default { ${FAST} };`,
-      'favcon.config.mjs': 'export default { colours: 8 };',
+      'favseed.config.js': `export default { ${FAST} };`,
+      'favseed.config.mjs': 'export default { colours: 8 };',
     });
     const r = await run(dir);
     assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stderr, /^favcon: warning: favcon\.config\.mjs ignored: favcon\.config\.js is the config file in use$/m);
+    assert.match(r.stderr, /^favseed: warning: favseed\.config\.mjs ignored: favseed\.config\.js is the config file in use$/m);
   });
 
   it('still prints the usage and fails with no input from flags or config', async () => {
@@ -254,12 +254,12 @@ describe('the CLI with a config file', () => {
   });
 });
 
-describe('defineConfig from favcon', () => {
+describe('defineConfig from favseed', () => {
   it('works in a config file the CLI is loading', async () => {
     // The config imports the very module the CLI is running. With a top-level await on cli()
     // that module is still evaluating, the import waits for it, and it waits for the import.
     const url = pathToFileURL(CLI).href;
-    const dir = project({ 'favcon.config.mjs': `import { defineConfig } from '${url}';\nexport default defineConfig({ ${FAST} });` });
+    const dir = project({ 'favseed.config.mjs': `import { defineConfig } from '${url}';\nexport default defineConfig({ ${FAST} });` });
     const r = await run(dir);
     assert.equal(r.code, 0, `exit ${r.code}\n${r.stderr}`);
     assert.ok(existsSync(join(dir, 'public', 'icon-32.png')));
@@ -267,8 +267,8 @@ describe('defineConfig from favcon', () => {
 
   it('declares its types through the package exports', () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
-    assert.deepEqual(pkg.exports['.'], { types: './bin/favcon.d.mts', default: './bin/favcon.mjs' });
-    assert.ok(existsSync(join(ROOT, 'bin', 'favcon.d.mts')));
+    assert.deepEqual(pkg.exports['.'], { types: './bin/favseed.d.mts', default: './bin/favseed.mjs' });
+    assert.ok(existsSync(join(ROOT, 'bin', 'favseed.d.mts')));
   });
 
   const tsc = join(ROOT, 'site', 'node_modules', 'typescript', 'bin', 'tsc');

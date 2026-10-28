@@ -1,6 +1,6 @@
 // A ZIP writer, stored (uncompressed), in about sixty lines.
 //
-// No dependency, for the same reason favcon writes its own ICO container: the format's useful
+// No dependency, for the same reason favseed writes its own ICO container: the format's useful
 // subset is small, and a library would be more bytes than the thing it packs. Every entry is
 // STORE rather than DEFLATE because the payload is already PNG and SVG: deflating a zopflied
 // PNG is work that returns nothing, and CompressionStream would make this async for no gain.

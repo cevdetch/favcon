@@ -18,18 +18,18 @@ import { after, before, describe, it } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
-import { build, FavconError, icoWrap, optimiseSvg } from '../bin/favcon.mjs';
-import favconAstro from '../astro/index.mjs';
+import { build, FavseedError, icoWrap, optimiseSvg } from '../bin/favseed.mjs';
+import favseedAstro from '../astro/index.mjs';
 import { reference, score, THRESHOLD_PCT } from './lib/accuracy.mjs';
 import { decode, encode, header } from './lib/png.mjs';
 
 const execFileAsync = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(HERE);
-const CLI = join(ROOT, 'bin', 'favcon.mjs');
+const CLI = join(ROOT, 'bin', 'favseed.mjs');
 const fixture = (n) => join(HERE, 'fixtures', n);
 
-const scratch = mkdtempSync(join(tmpdir(), 'favcon-test.'));
+const scratch = mkdtempSync(join(tmpdir(), 'favseed-test.'));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
 let counter = 0;
@@ -197,7 +197,7 @@ describe('custom properties', () => {
     const out = freshDir();
     const r = await cli(['--bg', '#fff', '-o', out, fixture('unresolved.svg')]);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: unresolved var\(--brand\)/m);
+    assert.match(r.stderr, /^favseed: unresolved var\(--brand\)/m);
     assert.ok(!/at .*\.mjs:\d+/.test(r.stderr), `a stack trace leaked:\n${r.stderr}`);
     assert.ok(!existsSync(out), 'a failed run created the output directory');
   });
@@ -234,8 +234,8 @@ describe('the ICO container', () => {
 
   it('refuses a size it cannot represent, and a payload that disagrees', () => {
     const png = encode({ width: 32, height: 32, data: new Uint8Array(32 * 32 * 4) });
-    assert.throws(() => icoWrap(png, 257), FavconError);
-    assert.throws(() => icoWrap(png, 0), FavconError);
+    assert.throws(() => icoWrap(png, 257), FavseedError);
+    assert.throws(() => icoWrap(png, 0), FavseedError);
     assert.throws(() => icoWrap(png, 16), /is 32x32, expected 16x16/);
     assert.throws(() => icoWrap(Buffer.from('not a png'), 32), /not a PNG/);
   });
@@ -256,7 +256,7 @@ describe('the ICO container', () => {
 
 describe('accuracy', () => {
 
-  // Scored at the sizes favcon ships by default. The bar is a statement about those:
+  // Scored at the sizes favseed ships by default. The bar is a statement about those:
   // at 32 px a mark is 1024 pixels of which almost all are anti-aliasing edges, and no palette
   // reproduces that to 8/255; the size table in docs/BENCHMARKS.md shows the whole curve.
   const CHECKS = [
@@ -387,13 +387,13 @@ describe('optional outputs and option syntax', () => {
   it('rejects an argument on a flag that takes none', async () => {
     const r = await cli(['--quiet=yes', fixture('flat.svg')]);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: --quiet takes no argument/m);
+    assert.match(r.stderr, /^favseed: --quiet takes no argument/m);
   });
 
   it('ends option parsing at --', async () => {
     const r = await cli(['--bg', '#fff', '--', '--not-a-flag.svg']);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: no such file: --not-a-flag\.svg$/m);
+    assert.match(r.stderr, /^favseed: no such file: --not-a-flag\.svg$/m);
   });
 });
 
@@ -602,15 +602,15 @@ describe('determinism and atomicity', () => {
   it('leaves no staging directory behind, on success or on failure', async () => {
     const out = freshDir();
     await build({ input: fixture('flat.svg'), out, sizes: [32] });
-    await assert.rejects(build({ input: fixture('unresolved.svg'), out, sizes: [32] }), FavconError);
-    assert.deepEqual(readdirSync(out).filter((f) => f.startsWith('.favcon')), []);
+    await assert.rejects(build({ input: fixture('unresolved.svg'), out, sizes: [32] }), FavseedError);
+    assert.deepEqual(readdirSync(out).filter((f) => f.startsWith('.favseed')), []);
   });
 
   it('leaves a previous output set intact when a later run fails', async () => {
     const out = freshDir();
     await build({ input: fixture('flat.svg'), out, sizes: [32] });
     const before = Object.fromEntries(readdirSync(out).map((f) => [f, readFileSync(join(out, f))]));
-    await assert.rejects(build({ input: fixture('unresolved.svg'), out, sizes: [32] }), FavconError);
+    await assert.rejects(build({ input: fixture('unresolved.svg'), out, sizes: [32] }), FavseedError);
     const after = Object.fromEntries(readdirSync(out).map((f) => [f, readFileSync(join(out, f))]));
     assert.deepEqual(Object.keys(after).sort(), Object.keys(before).sort());
     for (const f of Object.keys(before)) assert.deepEqual([...after[f]], [...before[f]], `${f} was disturbed`);
@@ -655,7 +655,7 @@ describe('bad input fails clearly', () => {
     it(`${args.join(' ')}`, async () => {
       const r = await cli(args.map((a) => (a === 'X' ? fixture('general.svg') : a)).concat(['--bg', '#fff']));
       assert.equal(r.code, 1);
-      assert.match(r.stderr, /^favcon: /m);
+      assert.match(r.stderr, /^favseed: /m);
       assert.match(r.stderr, expect);
       assert.ok(!/\n\s+at /.test(r.stderr), `a stack trace leaked:\n${r.stderr}`);
     });
@@ -664,13 +664,13 @@ describe('bad input fails clearly', () => {
   it('a missing file', async () => {
     const r = await cli(['--bg', '#fff', join(scratch, 'nope.svg')]);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: no such file: /m);
+    assert.match(r.stderr, /^favseed: no such file: /m);
   });
 
   it('a file that is not an SVG', async () => {
     const r = await cli(['--bg', '#fff', fixture('notsvg.txt')]);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: not an SVG \(no <svg> element found\): notsvg\.txt$/m);
+    assert.match(r.stderr, /^favseed: not an SVG \(no <svg> element found\): notsvg\.txt$/m);
   });
 
   it('a translucent --bg, which would put alpha in icons declared maskable', async () => {
@@ -678,7 +678,7 @@ describe('bad input fails clearly', () => {
       const out = freshDir();
       const r = await cli(['--bg', bg, fixture('flat.svg'), '-o', out]);
       assert.equal(r.code, 1, `--bg ${bg} was accepted`);
-      assert.match(r.stderr, /^favcon: --bg must be opaque/m, `--bg ${bg}: ${r.stderr}`);
+      assert.match(r.stderr, /^favseed: --bg must be opaque/m, `--bg ${bg}: ${r.stderr}`);
       assert.ok(!existsSync(out), `--bg ${bg} created the output directory`);
     }
   });
@@ -686,7 +686,7 @@ describe('bad input fails clearly', () => {
   it('a --bg resvg will not take', async () => {
     const r = await cli(['--bg', 'nonered', fixture('flat.svg'), '-o', freshDir()]);
     assert.equal(r.code, 1);
-    assert.match(r.stderr, /^favcon: --bg is not a colour resvg accepts: 'nonered'/m);
+    assert.match(r.stderr, /^favseed: --bg is not a colour resvg accepts: 'nonered'/m);
   });
 });
 
@@ -830,7 +830,7 @@ describe('rendering', () => {
     const out = freshDir();
     const r = await cli(['--bg', '#fff', '--sizes', '32', '-o', out, fixture('wide.svg')]);
     assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stderr, /^favcon: warning: viewBox 128x64 is not square/m);
+    assert.match(r.stderr, /^favseed: warning: viewBox 128x64 is not square/m);
     const h = header(readFileSync(join(out, 'icon-32.png')));
     assert.equal(h.width, 32);
     assert.equal(h.height, 32);
@@ -841,7 +841,7 @@ describe('rendering', () => {
   it('warns when --bg is not given', async () => {
     const r = await cli(['--sizes', '32', '-o', freshDir(), fixture('flat.svg')]);
     assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stderr, /^favcon: warning: --bg not given/m);
+    assert.match(r.stderr, /^favseed: warning: --bg not given/m);
   });
 });
 
@@ -858,8 +858,8 @@ describe('the published tarball', () => {
     const parsed = JSON.parse(raw);
     const pkg = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
     const files = pkg.files.map((f) => f.path);
-    assert.ok(files.includes('bin/favcon.mjs'), 'bin/favcon.mjs is missing');
-    // bin/favcon.mjs imports lib/core.mjs, so a tarball without it installs and then throws
+    assert.ok(files.includes('bin/favseed.mjs'), 'bin/favseed.mjs is missing');
+    // bin/favseed.mjs imports lib/core.mjs, so a tarball without it installs and then throws
     // ERR_MODULE_NOT_FOUND on first run. This assertion is the only thing standing between
     // the split and a broken publish.
     assert.ok(files.includes('lib/core.mjs'), 'lib/core.mjs is missing - the package cannot run');
@@ -912,19 +912,19 @@ describe('the svg stage on its own', () => {
     assert.ok(!/#1f3a5f/i.test(b.data));
   });
 
-  it('throws FavconError on a var() with no fallback, in the icon pass', () => {
+  it('throws FavseedError on a var() with no fallback, in the icon pass', () => {
     assert.throws(() => optimiseSvg(read('unresolved'), { icon: true }), (e) => {
-      assert.ok(e instanceof FavconError);
+      assert.ok(e instanceof FavseedError);
       assert.match(e.message, /unresolved var\(--brand\)/);
       return true;
     });
   });
 
-  it('throws FavconError, naming --no-animation only for the logo pass', () => {
+  it('throws FavseedError, naming --no-animation only for the logo pass', () => {
     const src = read('animvar');
     assert.doesNotThrow(() => optimiseSvg(src, { icon: true }));
     assert.throws(() => optimiseSvg(src, { icon: false }), (e) => {
-      assert.ok(e instanceof FavconError);
+      assert.ok(e instanceof FavseedError);
       assert.match(e.message, /unresolved var\(--beat\)/);
       assert.match(e.message, /--no-animation/);
       return true;
@@ -971,7 +971,7 @@ describe('the svg stage on its own', () => {
 describe('option validation, without touching a binary', () => {
   const bad = async (options, expect) => {
     await assert.rejects(build({ input: fixture('general.svg'), ...options }), (e) => {
-      assert.ok(e instanceof FavconError, `expected FavconError, got ${e?.name}`);
+      assert.ok(e instanceof FavseedError, `expected FavseedError, got ${e?.name}`);
       assert.match(e.message, expect);
       return true;
     });
@@ -1010,7 +1010,7 @@ describe('option validation, without touching a binary', () => {
 
 // ---------------------------------------------------- the Astro integration --
 // Driven with stub hook arguments rather than a real Astro build: the contract that matters
-// is which hook does what, and a real build would test Astro rather than favcon.
+// is which hook does what, and a real build would test Astro rather than favseed.
 
 describe('the astro integration', () => {
   const stub = (root, base = '/') => {
@@ -1036,15 +1036,15 @@ describe('the astro integration', () => {
 
   const linksFrom = (calls) => {
     const plugin = calls.configs.flatMap((c) => c.vite?.plugins ?? [])
-      .find((p) => p.name === 'favcon:virtual');
-    return plugin.load('\0virtual:favcon');
+      .find((p) => p.name === 'favseed:virtual');
+    return plugin.load('\0virtual:favseed');
   };
 
   it('bails immediately on sync and on preview', async () => {
     for (const command of ['sync', 'preview']) {
       const root = freshDir();
       const s = stub(root);
-      await favconAstro({ input: 'logo.svg' }).hooks['astro:config:setup']({ command, ...s.args });
+      await favseedAstro({ input: 'logo.svg' }).hooks['astro:config:setup']({ command, ...s.args });
       assert.deepEqual(s.calls.watched, [], `${command} watched a file`);
       assert.deepEqual(s.calls.middleware, [], `${command} registered middleware`);
     }
@@ -1053,18 +1053,18 @@ describe('the astro integration', () => {
   it('config:setup watches the input and registers middleware, and does not build', async () => {
     const root = freshDir();
     const s = stub(root);
-    await favconAstro({ input: 'src/logo.svg' }).hooks['astro:config:setup']({ command: 'build', ...s.args });
+    await favseedAstro({ input: 'src/logo.svg' }).hooks['astro:config:setup']({ command: 'build', ...s.args });
     assert.deepEqual(s.calls.watched, [join(root, 'src', 'logo.svg')]);
     assert.equal(s.calls.middleware.length, 1);
     assert.equal(s.calls.middleware[0].order, 'post');
-    assert.equal(s.calls.middleware[0].entrypoint, 'favcon/astro/middleware');
+    assert.equal(s.calls.middleware[0].entrypoint, 'favseed/astro/middleware');
     assert.ok(!existsSync(join(root, 'public')), 'config:setup built something');
   });
 
   it('prefixes config.base and keeps sizes="32x32" on the ICO', async () => {
     const root = freshDir();
     const s = stub(root, '/blog/');
-    await favconAstro({}).hooks['astro:config:setup']({ command: 'build', ...s.args });
+    await favseedAstro({}).hooks['astro:config:setup']({ command: 'build', ...s.args });
     const links = linksFrom(s.calls);
     assert.match(links, /\/blog\/favicon\.ico/);
     assert.match(links, /\/blog\/icon\.svg/);
@@ -1076,21 +1076,21 @@ describe('the astro integration', () => {
   it('head: false logs the block instead of registering middleware', async () => {
     const root = freshDir();
     const s = stub(root);
-    await favconAstro({ head: false }).hooks['astro:config:setup']({ command: 'build', ...s.args });
+    await favseedAstro({ head: false }).hooks['astro:config:setup']({ command: 'build', ...s.args });
     assert.deepEqual(s.calls.middleware, []);
     assert.ok(s.calls.logs.some(([, m]) => m.includes('rel="icon"')), 'the block was not logged');
   });
 
   it('rejects an option it cannot honour', () => {
-    assert.throws(() => favconAstro({ dev: 'sometimes' }), /dev must be/);
-    assert.throws(() => favconAstro({ head: 'maybe' }), /head must be/);
+    assert.throws(() => favseedAstro({ dev: 'sometimes' }), /dev must be/);
+    assert.throws(() => favseedAstro({ head: 'maybe' }), /head must be/);
   });
 
   it('builds into public/ and hits the cache the second time',
     async () => {
       const root = freshDir();
       const s = stub(root);
-      const integration = favconAstro({ input: 'logo.svg', sizes: [32] });
+      const integration = favseedAstro({ input: 'logo.svg', sizes: [32] });
       copyFileSync(fixture('flat.svg'), (mkdirSync(root, { recursive: true }), join(root, 'logo.svg')));
       await integration.hooks['astro:config:setup']({ command: 'build', ...s.args });
       await integration.hooks['astro:build:start']({ logger: s.args.logger });
@@ -1111,7 +1111,7 @@ describe('the astro integration', () => {
     // which 404s on any site deployed under a base path, and the PWA install fails with it.
     const root = freshDir();
     const s = stub(root, '/blog');
-    const integration = favconAstro({ input: 'logo.svg', sizes: [32], manifest: true });
+    const integration = favseedAstro({ input: 'logo.svg', sizes: [32], manifest: true });
     copyFileSync(fixture('flat.svg'), (mkdirSync(root, { recursive: true }), join(root, 'logo.svg')));
     await integration.hooks['astro:config:setup']({ command: 'build', ...s.args });
     await integration.hooks['astro:build:start']({ logger: s.args.logger });
@@ -1123,10 +1123,10 @@ describe('the astro integration', () => {
   it('keeps going when public/ already holds exactly what it would write',
     async () => {
       // The clean-install case: node_modules/.cache is gone, so the stamp is gone, but the
-      // files in public/ are still favcon's because the same input produces the same bytes.
+      // files in public/ are still favseed's because the same input produces the same bytes.
       const root = freshDir();
       const s = stub(root);
-      const integration = favconAstro({ input: 'logo.svg', sizes: [32] });
+      const integration = favseedAstro({ input: 'logo.svg', sizes: [32] });
       mkdirSync(root, { recursive: true });
       copyFileSync(fixture('flat.svg'), join(root, 'logo.svg'));
       await integration.hooks['astro:config:setup']({ command: 'build', ...s.args });
@@ -1141,13 +1141,13 @@ describe('the astro integration', () => {
     async () => {
       const root = freshDir();
       const s = stub(root);
-      const integration = favconAstro({ input: 'logo.svg', sizes: [32] });
+      const integration = favseedAstro({ input: 'logo.svg', sizes: [32] });
       mkdirSync(join(root, 'public'), { recursive: true });
       copyFileSync(fixture('flat.svg'), join(root, 'logo.svg'));
       writeFileSync(join(root, 'public', 'favicon.ico'), 'a hand-tuned icon nobody should clobber');
 
       await integration.hooks['astro:config:setup']({ command: 'build', ...s.args });
       await assert.rejects(integration.hooks['astro:build:start']({ logger: s.args.logger }),
-        /public\/favicon\.ico already exists and favcon did not write it/);
+        /public\/favicon\.ico already exists and favseed did not write it/);
     });
 });

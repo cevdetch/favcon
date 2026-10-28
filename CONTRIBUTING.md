@@ -3,7 +3,7 @@
 Use the **Bug report** or **Feature request** issue form to describe a problem
 before proposing a change. Follow the [code of conduct](CODE_OF_CONDUCT.md) in
 project discussions and [SECURITY.md](SECURITY.md) for sensitive findings.
-For usage questions, start with the [website](https://favcon.cevdet.ch) and
+For usage questions, start with the [website](https://favseed.cevdet.ch) and
 [README](README.md); open a blank issue if they do not answer your question.
 
 ## The one rule
@@ -47,7 +47,7 @@ pnpm install                   # the whole setup: the root and site/, one worksp
 
 Three optional tools turn on more checks. `resvg` on PATH runs the render-fidelity test, which
 holds the engine to the resvg CLI pixel for pixel. `icotool` (from `icoutils`) runs the test
-asserting favcon's 22-byte ICO writer is byte-identical to `icotool -c -r`. `bench/` needs
+asserting favseed's 22-byte ICO writer is byte-identical to `icotool -c -r`. `bench/` needs
 resvg, pngquant and oxipng for its native reference arm.
 
 ## Definition of done
@@ -80,7 +80,7 @@ resvg, pngquant and oxipng for its native reference arm.
 12. Temp files are removed on success **and** on failure; a failed run leaves any previous output
     set intact, and leaves no staging directory behind.
 13. `--colors` outside 2–256, a missing input, a non-SVG input and an unknown flag all fail with a
-    clear `favcon: …` message and **no stack trace**.
+    clear `favseed: …` message and **no stack trace**.
 14. Animation lands in `logo.svg` and nowhere else: it keeps its reduced-motion guard, has `var()`
     resolved inside it, carries no `role`/`aria-*`, and every surviving class is a live selector.
     `--no-animation` makes `logo.svg` equal `icon.svg`; a static source does the same. `icon.svg`
@@ -94,12 +94,12 @@ resvg, pngquant and oxipng for its native reference arm.
 17. A non-square viewBox warns on stderr.
 18. `npm pack` contains only `bin/`, `lib/`, `astro/`, `vite/`, `README.md`, `LICENSE`,
     `CHANGELOG.md`, and `lib/core.mjs` by name, since the package cannot run without it.
-19. A `favcon.config.js`, `.mjs` or `.ts` in the working directory supplies any option; flags win,
+19. A `favseed.config.js`, `.mjs` or `.ts` in the working directory supplies any option; flags win,
     and `--var` merges by name. An unknown key, a default export that is not an object, or a
-    config that fails to load is a `favcon: …` message with no stack trace; a `.ts` Node cannot
-    load names `favcon.config.mjs`.
+    config that fails to load is a `favseed: …` message with no stack trace; a `.ts` Node cannot
+    load names `favseed.config.mjs`.
 20. `base` prefixes every `href` from `--html` and every icon `src` in the manifest.
-21. `favcon/vite` emits the same bytes as the CLI, once, at the output root of a client build
+21. `favseed/vite` emits the same bytes as the CLI, once, at the output root of a client build
     and nowhere in an SSR build; links them in `index.html` unless the page already has a
     `<link rel="icon">`; serves them in dev at `base`; and never replaces a different file in
     `public/`.
@@ -129,18 +129,18 @@ palette it sits at 0.114 % on the 192 px icon, and at `--colors 8` at 0.70 % on 
 apple icon, against a 1.0 % bar. If it is the *only* thing that fails after an engine bump,
 that is the fixture doing its job. Run
 `node bench/bench.mjs accuracy` and compare against `docs/BENCHMARKS.md` before concluding
-favcon regressed.
+favseed regressed.
 
 ## House style
 
-- `bin/favcon.mjs` holds what only the CLI does: options, staging, the atomic write. What the
+- `bin/favseed.mjs` holds what only the CLI does: options, staging, the atomic write. What the
   website also runs lives in `lib/`, which imports nothing. The Astro integration may import
   either; neither may import the Astro integration.
 - No new CLI flags without a stated user need. The surface is kept small on purpose.
 - Comments explain **why**, and cite the measurement. The code is dense in places because the
   obvious version is wrong, and a reader must be able to find out why without a git
   archaeology trip.
-- Errors are `favcon: <message>` on stderr with a non-zero exit, never a raw stack trace.
+- Errors are `favseed: <message>` on stderr with a non-zero exit, never a raw stack trace.
 
 ## Releasing
 

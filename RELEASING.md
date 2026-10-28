@@ -1,6 +1,6 @@
 # Releasing
 
-favcon is one package, `favcon`. Registry commands use pnpm, which keeps its own login
+favseed is one package, `favseed`. Registry commands use pnpm, which keeps its own login
 (`pnpm login`, checked with `pnpm whoami`); pnpm 12 has `publish`, `stage`, `view` and
 `deprecate`. No npm token is ever created for this project (decision 23).
 
@@ -15,27 +15,27 @@ minimum**, never patch: downstream users diff these files into git.
 
 ## Before 0.1.0: one-time setup
 
-1. **GitHub.** Verify the repository is `cevdetch/favcon`. `package.json`'s `repository` must
+1. **GitHub.** Verify the repository is `cevdetch/favseed`. `package.json`'s `repository` must
    name the repository the workflow runs in, or npm rejects the provenance.
 
    ```sh
-   git remote get-url origin   # git@github.com:cevdetch/favcon.git
+   git remote get-url origin   # git@github.com:cevdetch/favseed.git
    ```
 
    Wait for CI to pass on `main` before going further.
 
-2. **Cloudflare Pages** (the website, <https://favcon.cevdet.ch>). Create a Pages project
+2. **Cloudflare Pages** (the website, <https://favseed.cevdet.ch>). Create a Pages project
    connected to the repository, no adapter, no deploy workflow:
 
    | setting | value |
    |---|---|
    | Production branch | `main` |
-   | Build command | `pnpm --filter favcon-site build` |
+   | Build command | `pnpm --filter favseed-site build` |
    | Build output directory | `site/dist` |
    | Environment variable | `NODE_VERSION` = `24` |
 
    pnpm is picked up from `packageManager` in `package.json`. Then **Custom domains → Set up a
-   domain**: `favcon.cevdet.ch`. The site writes its own `_headers`.
+   domain**: `favseed.cevdet.ch`. The site writes its own `_headers`.
 
 ## 0.1.0
 
@@ -45,7 +45,7 @@ On an up-to-date `main` with a clean working tree and CI green:
 
    ```sh
    pnpm whoami            # your npm user
-   pnpm view favcon       # must fail with 404
+   pnpm view favseed       # must fail with 404
    ```
 
 2. Date the release in `CHANGELOG.md`: the `## [0.1.0] - YYYY-MM-DD` heading carries the day
@@ -64,19 +64,19 @@ On an up-to-date `main` with a clean working tree and CI green:
 
    ```sh
    cd "$(mktemp -d)" && npm init -y >/dev/null
-   npm install /path/to/favcon/favcon-0.1.0.tgz
-   npx favcon --version                        # 0.1.0
-   npx favcon /path/to/favcon/test/fixtures/general.svg --out out && ls out
+   npm install /path/to/favseed/favseed-0.1.0.tgz
+   npx favseed --version                        # 0.1.0
+   npx favseed /path/to/favseed/test/fixtures/general.svg --out out && ls out
    ```
 
 5. Publish it (pnpm asks for 2FA):
 
    ```sh
-   pnpm publish favcon-0.1.0.tgz --access public
+   pnpm publish favseed-0.1.0.tgz --access public
    ```
 
 6. Set up trusted publishing for every later release, on npmjs.com, under the package:
-   - **Settings → Trusted publishing → GitHub Actions**: repository `cevdetch/favcon`,
+   - **Settings → Trusted publishing → GitHub Actions**: repository `cevdetch/favseed`,
      workflow `release.yml`, environment `npm`, publishing mode **stage** (direct publishing
      off).
    - **Settings → Publishing access**: "Require two-factor authentication and disallow
@@ -90,7 +90,7 @@ On an up-to-date `main` with a clean working tree and CI green:
    git push origin v0.1.0
    ```
 
-8. Check: the package on npmjs.com, and in an empty directory `npx favcon@0.1.0 --version`
+8. Check: the package on npmjs.com, and in an empty directory `npx favseed@0.1.0 --version`
    prints `0.1.0`.
 
 9. Submit to the [Astro integrations directory](https://astro.build/integrations/): it indexes
@@ -122,7 +122,7 @@ On an up-to-date `main` with a clean working tree and CI green:
 
    `pnpm stage reject <stage-id>` drops a staged package instead.
 5. Check the package on npmjs.com (provenance shown, `latest` moved) and run
-   `npx favcon@X.Y.Z --version` in an empty directory.
+   `npx favseed@X.Y.Z --version` in an empty directory.
 
 The workflow runs in the GitHub environment `npm`, which the trusted publisher checks. GitHub
 creates it on the first run; create it under Settings → Environments only to add protection

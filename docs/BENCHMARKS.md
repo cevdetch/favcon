@@ -110,7 +110,7 @@ The baseline is 15, oxipng's default and the fast mode's count; release builds u
 
 ## Serial against concurrent rasters (decision 13, re-measured)
 
-Four jobs (180 px on a ground, 192, 512 and the 32 px ICO payload) through the full pipeline. 3 interleaved repetitions per arm, identical work in every arm, on a 16-core machine. The --zi axis is here because favicon.sh passes a bare --zopfli (which is --zi 15) where favcon passes --zi 120, and a comparison that varied only the scheduling would have credited that to concurrency.
+Four jobs (180 px on a ground, 192, 512 and the 32 px ICO payload) through the full pipeline. 3 interleaved repetitions per arm, identical work in every arm, on a 16-core machine. The --zi axis is here because favicon.sh passes a bare --zopfli (which is --zi 15) where favseed passes --zi 120, and a comparison that varied only the scheduling would have credited that to concurrency.
 
 ```
  at once  --zi     wall     min     max  child cpu   cores    bytes  vs shipped
@@ -124,7 +124,7 @@ Four jobs (180 px on a ground, 192, 512 and the 32 px ICO payload) through the f
 
 ## The ICO container
 
-A PNG payload against icotool's default BMP one, and favcon's 22-byte writer against `icotool -c -r`.
+A PNG payload against icotool's default BMP one, and favseed's 22-byte writer against `icotool -c -r`.
 
 ```
 raw PNG payload       4479 B

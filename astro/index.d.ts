@@ -3,7 +3,7 @@
 
 import type { AstroIntegration } from 'astro';
 
-export interface FavconOptions {
+export interface FavseedOptions {
   /** The mark, relative to the project root. Default: `src/logo.svg`. */
   input?: string;
   /** Padded PNG sizes, the manifest's "any maskable" icons. A real array: the CLI's string form exists only because argv is strings. Default: `[192, 512]`. */
@@ -32,10 +32,10 @@ export interface FavconOptions {
   dev?: 'fast' | 'skip' | 'full';
   /**
    * `'inject'` (default) splices the tags before `</head>`, skipping any page that already
-   * has a `<link rel="icon">`. `'component'` leaves it to `favcon/astro/Head.astro`. `false` logs the
+   * has a `<link rel="icon">`. `'component'` leaves it to `favseed/astro/Head.astro`. `false` logs the
    * block for you to paste.
    */
   head?: 'inject' | 'component' | false;
 }
 
-export default function favcon(options?: FavconOptions): AstroIntegration;
+export default function favseed(options?: FavseedOptions): AstroIntegration;

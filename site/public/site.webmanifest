@@ -1,6 +1,6 @@
 {
-  "name": "favcon",
-  "short_name": "favcon",
+  "name": "favseed",
+  "short_name": "favseed",
   "description": "One SVG in, an optimised favicon set out.",
   "start_url": "/",
   "display": "standalone",

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# favcon against its two predecessors, with hyperfine.
+# favseed against its two predecessors, with hyperfine.
 #
 #   bench/compare.sh [corpus-dir]
 #
 # The three are NOT interchangeable, and a single number would hide that, so this runs two
 # configurations and a byte sweep:
 #
-#   A  defaults      what you actually get by typing the command. favcon defaults to
+#   A  defaults      what you actually get by typing the command. favseed defaults to
 #                    --colors 256 and the other two to 8, so this is a comparison of
 #                    products, not of implementations.
 #   B  like-for-like --colors 8 --sizes "192 512" everywhere, which is the only way to
@@ -17,7 +17,7 @@
 #
 # Read the caveat in the output before quoting a speedup: favicon.sh does less work. It
 # emits no logo.svg, and its perl inliner bails out on any at-rule - so for an animated
-# mark its icon.svg keeps the <style>, the @media and the @keyframes that favcon's
+# mark its icon.svg keeps the <style>, the @media and the @keyframes that favseed's
 # icon.svg exists to remove.
 
 set -Eeuo pipefail
@@ -26,10 +26,10 @@ export LC_ALL=C
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 ROOT=$(dirname -- "$HERE")
 
-NEW=${FAVCON_NEW:-$ROOT/bin/favcon.mjs}
-OLD=${FAVCON_OLD:-$HOME/dev/branding-c/favicon/favicon.mjs}
-SH=${FAVCON_SH:-$HOME/.local/bin/favicon.sh}
-CORPUS=${1:-${FAVCON_CORPUS:-$HOME/dev/branding/concepts}}
+NEW=${FAVSEED_NEW:-$ROOT/bin/favseed.mjs}
+OLD=${FAVSEED_OLD:-$HOME/dev/branding-c/favicon/favicon.mjs}
+SH=${FAVSEED_SH:-$HOME/.local/bin/favicon.sh}
+CORPUS=${1:-${FAVSEED_CORPUS:-$HOME/dev/branding/concepts}}
 OUT=$HERE/out/compare
 RUNS=${RUNS:-5}
 BYTE_MARKS=${BYTE_MARKS:-6}
@@ -58,7 +58,7 @@ add() {                                   # add <name> <defaults-cmd> <like-for-
 # build of several seconds, which is why using it is cheaper than fighting it with -N.
 BG="'#000000'"
 SZ="'192 512'"
-have "$NEW" && add "favcon (new)" \
+have "$NEW" && add "favseed (new)" \
   "node $NEW -q --bg $BG -o $OUT/r-new $MARK" \
   "node $NEW -q --bg $BG --colors 8 --sizes $SZ -o $OUT/r-new $MARK"
 have "$OLD" && add "favicon.mjs (old)" \
@@ -107,7 +107,7 @@ for m in "${MARKS[@]:0:$BYTE_MARKS}"; do
     d=$OUT/b-$i/${m##*/}
     rm -rf -- "$d"; mkdir -p -- "$d"
     case ${NAMES[$i]} in
-      favcon*) node "$NEW" -q --bg "#000000" --colors 8 --sizes "192 512" -o "$d" "$m" >/dev/null 2>&1 ;;
+      favseed*) node "$NEW" -q --bg "#000000" --colors 8 --sizes "192 512" -o "$d" "$m" >/dev/null 2>&1 ;;
       favicon.mjs*) "$OLD" -q --bg "#000000" --colors 8 --sizes "192 512" -o "$d" "$m" >/dev/null 2>&1 ;;
       favicon.sh*) "$SH" -q --bg "#000000" --colors 8 --sizes "192 512" -o "$d" "$m" >/dev/null 2>&1 ;;
     esac

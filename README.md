@@ -1,9 +1,9 @@
-# favcon
+# favseed
 
 One SVG in, an optimised favicon set out.
 
 ```sh
-npx favcon logo.svg --out public
+npx favseed logo.svg --out public
 ```
 
 That is the whole quickstart. It writes six files, prints their sizes, and tells you if your
@@ -21,12 +21,12 @@ icon-512.png             2704 B  mark at 408px of 512 in the safe zone
 (That is `test/fixtures/general.svg`, a two-colour mark, at the defaults. Your bytes depend on
 your mark; `node bench/bench.mjs` measures the whole corpus.)
 
-No install at all: **[favcon.cevdet.ch](https://favcon.cevdet.ch)** runs the same SVG stage in
+No install at all: **[favseed.cevdet.ch](https://favseed.cevdet.ch)** runs the same SVG stage in
 your browser, with nothing uploaded. Its SVGs are byte-identical to the CLI's; its PNGs come
 from a substitute raster stage in WASM: within a few percent of the CLI's on flat marks, 14 %
 larger on a gradient, and the page shows the numbers.
 
-Add the links to your `<head>`. `favcon --html` prints them:
+Add the links to your `<head>`. `favseed --html` prints them:
 
 ```html
 <link rel="icon" href="/favicon.ico" sizes="32x32">
@@ -36,7 +36,7 @@ Add the links to your `<head>`. `favcon --html` prints them:
 
 ## Install
 
-`npx favcon logo.svg --out public` needs Node 24 or newer and nothing else. The image engine,
+`npx favseed logo.svg --out public` needs Node 24 or newer and nothing else. The image engine,
 [`@napi-rs/image`](https://www.npmjs.com/package/@napi-rs/image), installs with the package:
 resvg, oxipng and a quantiser in one native module, prebuilt for Linux, macOS and Windows on
 x64 and arm64, and FreeBSD on x64. [`@gfx/zopfli`](https://www.npmjs.com/package/@gfx/zopfli),
@@ -76,7 +76,7 @@ files for platforms that stopped existing), and its PNGs are whatever sharp's en
 sharp's `quality: 60` and `favgen` at `colors: 64`: one quantised encode, no comparison, no
 zopfli.
 
-favcon does fewer files and more work on each: quantise, compare the quantised and the
+favseed does fewer files and more work on each: quantise, compare the quantised and the
 lossless encode, and recompress the winner with zopfli. The test suite holds the default output to a
 pixel-accuracy bar (no more than 1 % of pixels off by a visible amount) rather than taking it
 on trust ([docs/BENCHMARKS.md](docs/BENCHMARKS.md) has the numbers). It also does the thing
@@ -109,14 +109,14 @@ argument rejects one.
 
 ### A config file
 
-Every option can live in `favcon.config.js`, `favcon.config.mjs` or `favcon.config.ts` in the
+Every option can live in `favseed.config.js`, `favseed.config.mjs` or `favseed.config.ts` in the
 working directory, the first one found. Flags win over it, and `--var` merges with its `vars`
-by name. Three keys have no flag: `input`, so a bare `favcon` builds the project's mark;
+by name. Three keys have no flag: `input`, so a bare `favseed` builds the project's mark;
 `base`, the path the site is served under; and `mode`.
 
 ```js
-// favcon.config.mjs
-import { defineConfig } from 'favcon'
+// favseed.config.mjs
+import { defineConfig } from 'favseed'
 
 export default defineConfig({
   input: 'src/logo.svg',
@@ -134,7 +134,7 @@ in 9.4 s against 27.7 s, and the bytes are not the release ones. The summary's l
 which mode ran.
 
 A `.ts` config loads through Node's type stripping, which erases annotations and transforms
-nothing: an `enum` or a `namespace` fails with a message pointing at `favcon.config.mjs`.
+nothing: an `enum` or a `namespace` fails with a message pointing at `favseed.config.mjs`.
 
 ### `--var`
 
@@ -142,11 +142,11 @@ Your mark can be a template. `var(--brand, #0E7C68)` renders as `#0E7C68` by def
 a browser resolves an undefined property, and `--var brand=#7C0E68` overrides it:
 
 ```sh
-favcon logo.svg --var brand=#7C0E68 --out public
+favseed logo.svg --var brand=#7C0E68 --out public
 ```
 
 A `var()` with no fallback and no override is an error, not a black square. (resvg has no
-`var()` support at all: it renders the whole mark black and warns on stderr, so favcon
+`var()` support at all: it renders the whole mark black and warns on stderr, so favseed
 resolves every custom property before anything is rasterised.)
 
 ### `--bg`
@@ -154,21 +154,21 @@ resolves every custom property before anything is rasterised.)
 iOS composites transparent Home Screen icons onto **black**, and a maskable icon should be
 opaque, so the padded icons get a ground rather than an alpha channel they would lose anyway.
 The default is `#000000`: what the platform would have done to a transparent icon regardless,
-minus the tRNS chunk. favcon warns when you did not choose, because the right ground is a
+minus the tRNS chunk. favseed warns when you did not choose, because the right ground is a
 property of your mark and not of the format. `--bg '#fff'` for a mark drawn on light,
 `--bg none` to keep the alpha (and with it an unpadded set, declared `"any"` only).
 
 The value is validated by asking resvg to render a 1×1 pixel with it, so anything resvg takes
 works (`#fff`, `teal`, `rgb(14 124 104)`, `hsl(170 80% 27%)`), and the validator can
 never disagree with the renderer. The same pixel must come out opaque: `transparent`,
-`rgba(…, 0.5)` or `#ffffff80` would put alpha into icons declared maskable, so favcon refuses
+`rgba(…, 0.5)` or `#ffffff80` would put alpha into icons declared maskable, so favseed refuses
 them and points you to `--bg none`.
 
 ### The padded icons
 
 Every platform that installs a web app shows its icon through a shape of its own:
 
-| Platform | Reads | Shape | favcon's file |
+| Platform | Reads | Shape | favseed's file |
 |---|---|---|---|
 | iOS, iPadOS, Safari Add to Dock | `apple-touch-icon`, 180 px for iPhone | rounded square, corners about 22 % | `apple-touch-icon.png` |
 | Android (Chrome, WebAPK) | manifest, `any maskable` | circle, squircle, rounded square | `icon-192.png`, `icon-512.png` |
@@ -202,7 +202,7 @@ safe circle at 56.6 %): across the fixtures `auto` chooses 7.6 %–18.8 % per si
 opaque in all four corners is full-bleed, drawn with its own ground, and used as it is.
 
 **Then it snaps to whole pixels.** An exact fit scales by an arbitrary factor, so the edges of
-a mark drawn on a grid fall between pixels and every one of them is anti-aliased. favcon walks
+a mark drawn on a grid fall between pixels and every one of them is anti-aliased. favseed walks
 the size down in whole pixels, no more than 10 %, and takes the size where the mark renders
 with the fewest pixels covered in part, but only if that at least halves them. A curved mark,
 which is anti-aliased at every size, keeps its exact fit. Measured on a seven-block grid mark
@@ -227,7 +227,7 @@ skips `@media`, and they are the same bytes a source without the block would pro
 
 ## Animation
 
-Animation lands in `logo.svg` and nowhere else. Feed favcon an animated mark and you get a
+Animation lands in `logo.svg` and nowhere else. Feed favseed an animated mark and you get a
 `logo.svg` that still moves, an `icon.svg` with the motion removed by a structural strip, and
 rasters rendered from the second one. That makes "the rasters are the rest frame" a property
 of the pipeline rather than a hope about resvg's CSS support.
@@ -256,64 +256,64 @@ byte copy of `icon.svg`.
 ```js
 // vite.config.js
 import { defineConfig } from 'vite'
-import favcon from 'favcon/vite'
+import favseed from 'favseed/vite'
 
 export default defineConfig({
-  plugins: [favcon({ input: 'src/logo.svg' })],
+  plugins: [favseed({ input: 'src/logo.svg' })],
 })
 ```
 
 **`vite dev`** builds the icons the first time a page asks for one, then serves them from
-memory. Edit the logo or `favcon.config.*` and the icons rebuild and the page reloads. Dev
+memory. Edit the logo or `favseed.config.*` and the icons rebuild and the page reloads. Dev
 builds use fast mode, so their bytes differ from a release build.
 
 **`vite build`** writes the release icons to the output directory, next to `index.html`.
-favcon never writes to `public/`.
+favseed never writes to `public/`.
 
-**The `<head>` tags.** favcon adds its `<link>` tags to `index.html`, unless the page already
+**The `<head>` tags.** favseed adds its `<link>` tags to `index.html`, unless the page already
 has a `<link rel="icon">`. A framework without an `index.html` can import them instead:
 
 ```js
-import { links, files } from 'virtual:favcon'
+import { links, files } from 'virtual:favseed'
 ```
 
-**Options.** The plugin takes the same options as `favcon.config.*`, except `out`: Vite decides
+**Options.** The plugin takes the same options as `favseed.config.*`, except `out`: Vite decides
 the output directory. Options passed to the plugin win over the config file. `base` defaults
 to Vite's `base`.
 
-**Your files come first.** If `public/` already holds a file favcon would write, such as
+**Your files come first.** If `public/` already holds a file favseed would write, such as
 `favicon.ico`, with different bytes, `vite build` stops with an error and `vite dev` serves
-your file with a warning. Delete it to use favcon's.
+your file with a warning. Delete it to use favseed's.
 
 ### With vite-plugin-pwa
 
-vite-plugin-pwa writes its own manifest, so favcon does not write one. Pass favcon's icons
+vite-plugin-pwa writes its own manifest, so favseed does not write one. Pass favseed's icons
 to it:
 
 ```js
 import { VitePWA } from 'vite-plugin-pwa'
-import favcon, { favconIcons } from 'favcon/vite'
+import favseed, { favseedIcons } from 'favseed/vite'
 
 export default defineConfig({
   plugins: [
-    favcon(),
-    VitePWA({ manifest: { name: 'Example', icons: favconIcons() } }),
+    favseed(),
+    VitePWA({ manifest: { name: 'Example', icons: favseedIcons() } }),
   ],
 })
 ```
 
-Give `favconIcons()` the same `sizes`, `bg` and `base` as the plugin. Turn off
-vite-plugin-pwa's `pwaAssets` option: it writes a `favicon.ico` of its own, and favcon warns
+Give `favseedIcons()` the same `sizes`, `bg` and `base` as the plugin. Turn off
+vite-plugin-pwa's `pwaAssets` option: it writes a `favicon.ico` of its own, and favseed warns
 when both are on.
 
 ## Astro
 
 ```js
 // astro.config.mjs
-import favcon from 'favcon/astro'
+import favseed from 'favseed/astro'
 
 export default defineConfig({
-  integrations: [favcon({ input: 'src/logo.svg' })],
+  integrations: [favseed({ input: 'src/logo.svg' })],
 })
 ```
 
@@ -326,7 +326,7 @@ takes an object (`name`, `short_name`, `theme_color`, …) which is merged into 
 CLI writes icons-only because a CLI cannot know your app's name, but an integration can.
 
 ```js
-favcon({
+favseed({
   input: 'src/logo.svg',
   sizes: [192, 512],
   vars: { brand: '#0E7C68' },
@@ -338,7 +338,7 @@ favcon({
 ```
 
 **It does not rebuild on every dev-server restart.** The cache is content-addressed, not a
-heuristic: keyed on favcon's version, the input bytes, the canonicalised options **and the
+heuristic: keyed on favseed's version, the input bytes, the canonicalised options **and the
 versions of `@napi-rs/image` and `@gfx/zopfli`**. That last part is what makes it correct:
 both change their output across releases, so a cache keyed only on the SVG would hand back
 stale files after an upgrade, with no sign of it. A hit hardlinks into `public/` in
@@ -352,12 +352,12 @@ are not the production bytes, by design.
 JavaScript, and a `<link rel="icon">` written by a script is found after the browser has
 already asked for `/favicon.ico`. So `head: 'inject'` (the default) is an `order: 'post'`
 middleware that splices before `</head>` and skips any page that already has a
-`<link rel="icon">`. `head: 'component'` gives you `favcon/astro/Head.astro` to place yourself, and
+`<link rel="icon">`. `head: 'component'` gives you `favseed/astro/Head.astro` to place yourself, and
 `head: false` logs the block for pasting.
 
-favcon **will not overwrite a `public/favicon.ico` it did not write itself.** Clobbering a
+favseed **will not overwrite a `public/favicon.ico` it did not write itself.** Clobbering a
 hand-tuned ICO without a word is the worst possible first impression, so the check is on
-content: delete or move the file, and favcon writes its own.
+content: delete or move the file, and favseed writes its own.
 
 ## How it decides
 
@@ -368,14 +368,14 @@ Every step was chosen by measurement. The reasoning is in
 The short version, because these are the parts that look wrong until you know why:
 
 - **One engine, nothing to install.** `@napi-rs/image` bundles the resvg and oxipng versions
-  favcon was measured with, and its renders match the resvg CLI pixel for pixel. Against the
+  favseed was measured with, and its renders match the resvg CLI pixel for pixel. Against the
   native resvg, pngquant and oxipng pipeline its encodes are 9 % smaller on a gradient and
   0.46 % larger on flat marks (decision 26).
 - **Quantise before you recompress.** The quantiser re-encodes from scratch, so any order
   ending in quantisation throws away everything the recompressor did. Measured at 192 px, the
   wrong order is 21.0 % bigger.
 - **An ICO holding a PNG is a 22-byte header plus that PNG verbatim**, so nothing can be
-  optimised after packing. favcon writes that header itself, byte-identical to
+  optimised after packing. favseed writes that header itself, byte-identical to
   `icotool -c -r`, which removes the only dependency with no npm package and no Windows build.
   The BMP payload `icotool` writes by default is 8.8× larger on the fixtures.
 - **Zopfli runs once**, on the file that already won the lossy/lossless comparison. Running it
@@ -386,20 +386,20 @@ The short version, because these are the parts that look wrong until you know wh
 
 ## Contributing and help
 
-For usage questions, start with the [website](https://favcon.cevdet.ch) and the
+For usage questions, start with the [website](https://favseed.cevdet.ch) and the
 examples above. Use the repository's issue forms for bugs and feature requests.
-See [CONTRIBUTING.md](https://github.com/cevdetch/favcon/blob/main/CONTRIBUTING.md)
+See [CONTRIBUTING.md](https://github.com/cevdetch/favseed/blob/main/CONTRIBUTING.md)
 for setup and the measurement requirements for pipeline changes.
 
-Follow the [code of conduct](https://github.com/cevdetch/favcon/blob/main/CODE_OF_CONDUCT.md)
+Follow the [code of conduct](https://github.com/cevdetch/favseed/blob/main/CODE_OF_CONDUCT.md)
 in project discussions. Report sensitive findings through the
-[security policy](https://github.com/cevdetch/favcon/security/policy).
+[security policy](https://github.com/cevdetch/favseed/security/policy).
 
 Created and maintained by [Cevdet](https://cevdet.ch/)
 ([cevdetch](https://github.com/cevdetch)).
 
 ## Licence
 
-MIT. favcon spawns nothing. `@napi-rs/image` is MIT (its quantiser has been clean-room MIT
+MIT. favseed spawns nothing. `@napi-rs/image` is MIT (its quantiser has been clean-room MIT
 code since 1.13.0), the resvg inside it is `Apache-2.0 OR MIT`, and `@gfx/zopfli` is
 Apache-2.0. The dependency tree holds no GPL code.

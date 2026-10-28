@@ -1,7 +1,7 @@
 // A var() resolver for reference renders.
 //
-// A SECOND implementation on purpose, not an import of favcon's. The accuracy gate
-// compares favcon's output against a reference render, and if both sides resolved custom
+// A SECOND implementation on purpose, not an import of favseed's. The accuracy gate
+// compares favseed's output against a reference render, and if both sides resolved custom
 // properties with the same code then a resolver bug would cancel itself out and the gate
 // would pass. This one is slower and simpler; that is the point.
 

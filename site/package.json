@@ -1,8 +1,8 @@
 {
-  "name": "favcon-site",
+  "name": "favseed-site",
   "private": true,
   "type": "module",
-  "description": "favcon in the browser: the same SVG stage, a WASM raster stage, nothing uploaded.",
+  "description": "favseed in the browser: the same SVG stage, a WASM raster stage, nothing uploaded.",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

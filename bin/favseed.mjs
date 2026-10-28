@@ -58,10 +58,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inflateSync } from 'node:zlib';
 import { builtinPlugins, optimize } from 'svgo';
 
-// The isomorphic half of favcon, shared verbatim with the website. lib/core.mjs explains why
+// The isomorphic half of favseed, shared verbatim with the website. lib/core.mjs explains why
 // it is a second file and what the three seams are.
 import {
-  createSvgStage, DEFAULT_BG, FAST_ZOPFLI_ITERATIONS, FavconError,
+  createSvgStage, DEFAULT_BG, FAST_ZOPFLI_ITERATIONS, FavseedError,
   icoWrap, linkTags, maskableFit, nestForMask, placeInSafeZone, ZOPFLI_ITERATIONS,
 } from '../lib/core.mjs';
 import { checkConfig, defineConfig, normaliseOptions, resolveOptions } from '../lib/config.mjs';
@@ -70,7 +70,7 @@ import { buildSet } from '../lib/pipeline.mjs';
 
 // Re-exported so the public API is the same as before the split: the Astro
 // integration, the test suite and bench/ all import these from here.
-export { FavconError, icoWrap, linkTags, maskableFit, nestForMask, placeInSafeZone };
+export { FavseedError, icoWrap, linkTags, maskableFit, nestForMask, placeInSafeZone };
 
 // svgo's Node build. The website hands createSvgStage svgo/browser instead and gets the same
 // plugin list, because the list lives in core rather than in either caller.
@@ -79,7 +79,7 @@ export { optimiseSvg };
 export { defineConfig };
 
 // The engine's libraries load on first use, inside build(), so a platform without a prebuilt
-// fails with a favcon: message, not an import-time stack trace.
+// fails with a favseed: message, not an import-time stack trace.
 let enginePromise = null;
 export const loadEngine = () => (enginePromise ??= (async () => {
   try {
@@ -87,7 +87,7 @@ export const loadEngine = () => (enginePromise ??= (async () => {
     return createEngine({ image, zopfli, inflate: (bytes) => inflateSync(bytes) });
   } catch (e) {
     enginePromise = null;
-    throw new FavconError(
+    throw new FavseedError(
       `the image engine did not load on ${process.platform}-${process.arch}: ${e.message}\n` +
       `       @napi-rs/image ships prebuilt binaries for Linux, macOS, Windows and FreeBSD`,
     );
@@ -101,7 +101,7 @@ export const engineVersions = () => ({
   '@gfx/zopfli': require('@gfx/zopfli/package.json').version,
 });
 
-const PROG = 'favcon';
+const PROG = 'favseed';
 
 // ================================================================== staging ==
 // Temp directories that must not outlive the process, even on a signal. build() cleans up in
@@ -122,12 +122,12 @@ const registerSweep = () => {
 
 const normalise = (options) => {
   const o = normaliseOptions(options);
-  if (!o.input) throw new FavconError('no input file given');
-  if (!existsSync(o.input)) throw new FavconError(`no such file: ${o.input}`);
-  if (!statSync(o.input).isFile()) throw new FavconError(`not a file: ${o.input}`);
+  if (!o.input) throw new FavseedError('no input file given');
+  if (!existsSync(o.input)) throw new FavseedError(`no such file: ${o.input}`);
+  if (!statSync(o.input).isFile()) throw new FavseedError(`not a file: ${o.input}`);
 
   if (existsSync(o.out) && !statSync(o.out).isDirectory()) {
-    throw new FavconError(`--out exists and is not a directory: ${o.out}`);
+    throw new FavseedError(`--out exists and is not a directory: ${o.out}`);
   }
   return o;
 };
@@ -143,22 +143,22 @@ export async function buildFiles(options = {}) {
   const warn = options.onWarn ?? (() => {});
   let source;
   try { source = readFileSync(o.input, 'utf8'); } catch (e) {
-    throw new FavconError(`cannot read ${o.input}: ${e.message}`);
+    throw new FavseedError(`cannot read ${o.input}: ${e.message}`);
   }
   if (!/<svg[\s>]/i.test(source)) {
-    throw new FavconError(`not an SVG (no <svg> element found): ${basename(o.input)}`);
+    throw new FavseedError(`not an SVG (no <svg> element found): ${basename(o.input)}`);
   }
   try {
     const engine = await loadEngine();
     return await buildSet(source, o, { engine, optimiseSvg, name: basename(o.input), warn });
   } catch (e) {
-    if (e instanceof FavconError) throw e;
-    throw new FavconError(e.message);
+    if (e instanceof FavseedError) throw e;
+    throw new FavseedError(e.message);
   }
 }
 
 /**
- * Build the set. Throws FavconError with a finished message; never exits, never writes to
+ * Build the set. Throws FavseedError with a finished message; never exits, never writes to
  * stdout. Returns { files, bytes, animated, fit, links }, where `fit` is
  * { apple, icons: { [size]: fit } } (how the mark was placed in each masked icon), and
  * `icons[s]` is null under --bg none, when that size is transparent and unpadded.
@@ -173,12 +173,12 @@ export async function build(options = {}) {
     // The set exists in memory, so it is now safe to touch the output directory: a run that
     // fails on an unresolvable var() or a bad --bg leaves nothing behind.
     try { mkdirSync(o.out, { recursive: true }); } catch (e) {
-      throw new FavconError(`cannot create output directory ${o.out}: ${e.message}`);
+      throw new FavseedError(`cannot create output directory ${o.out}: ${e.message}`);
     }
     const outDir = realpathSync(o.out);
     // Stage inside $out so the final move is a same-filesystem rename, which is atomic.
     try { stage = mkdtempSync(join(outDir, `.${PROG}.`)); } catch (e) {
-      throw new FavconError(`cannot create a staging directory in ${outDir}: ${e.message}`);
+      throw new FavseedError(`cannot create a staging directory in ${outDir}: ${e.message}`);
     }
     LIVE.add(stage);
     for (const f of set.files) writeFileSync(join(stage, f.name), f.bytes);
@@ -187,15 +187,15 @@ export async function build(options = {}) {
     // leaves the previous output set untouched.
     for (const f of files) {
       const from = join(stage, f);
-      if (!existsSync(from) || statSync(from).size === 0) throw new FavconError(`internal error: ${f} was not produced`);
+      if (!existsSync(from) || statSync(from).size === 0) throw new FavseedError(`internal error: ${f} was not produced`);
     }
     // Each rename is atomic; the window between the first and the last is as small as it gets.
     for (const f of files) renameSync(join(stage, f), join(outDir, f));
     const bytes = Object.fromEntries(set.files.map((f) => [f.name, f.bytes.length]));
     return { files, bytes, animated: set.animated, fit: set.fit, dir: outDir, links: set.links };
   } catch (e) {
-    if (e instanceof FavconError) throw e;
-    throw new FavconError(e.message);
+    if (e instanceof FavseedError) throw e;
+    throw new FavseedError(e.message);
   } finally {
     if (stage) {
       rmSync(stage, { recursive: true, force: true });
@@ -208,7 +208,7 @@ export async function build(options = {}) {
 
 // The config file, by name, in the working directory: the project root for every host. No
 // flag points at another file, so the CLI's surface stays what it was.
-export const CONFIG_FILES = ['favcon.config.js', 'favcon.config.mjs', 'favcon.config.ts'];
+export const CONFIG_FILES = ['favseed.config.js', 'favseed.config.mjs', 'favseed.config.ts'];
 
 /**
  * The first config file in `dir`, imported and checked, or an empty config when there is
@@ -225,8 +225,8 @@ export const loadConfigFile = async (dir = process.cwd()) => {
     mod = await import(pathToFileURL(join(dir, file)).href);
   } catch (e) {
     const first = String(e?.message ?? e).split('\n')[0];
-    throw new FavconError(`${file} could not be loaded: ${first}` +
-      (file.endsWith('.ts') ? '\n       Node strips types but does not transform them; write favcon.config.mjs instead' : ''));
+    throw new FavseedError(`${file} could not be loaded: ${first}` +
+      (file.endsWith('.ts') ? '\n       Node strips types but does not transform them; write favseed.config.mjs instead' : ''));
   }
   return { config: checkConfig(mod.default, file), file, ignored };
 };
@@ -253,7 +253,7 @@ Options:
                     (default: auto). \`auto\` measures the mark's own extent and snaps it to
                     whole pixels, which is smaller and sharper than any fixed number. Give
                     a number to override it. Why: decisions 20 and 22 in
-                    https://github.com/cevdetch/favcon/blob/main/docs/DECISIONS.md
+                    https://github.com/cevdetch/favseed/blob/main/docs/DECISIONS.md
       --var N=V     Set a CSS custom property, e.g. --var c-primary=#0E7C68. Repeatable.
                     Without it, var(--x, fallback) resolves to its fallback, the way a
                     browser resolves an undefined property.
@@ -268,7 +268,7 @@ Options:
 
 Long options also take --opt=value. Use -- to end options.
 
-Options may also come from favcon.config.js, .mjs or .ts in the working directory,
+Options may also come from favseed.config.js, .mjs or .ts in the working directory,
 which can set input, base and mode too; flags win over it.
 
 Outputs: logo.svg  icon.svg  favicon.ico  apple-touch-icon.png  icon-<size>.png

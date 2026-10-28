@@ -1,4 +1,4 @@
-// The favcon Astro integration.
+// The favseed Astro integration.
 //
 // Three things decide the shape of this file:
 //
@@ -19,8 +19,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { build, engineVersions, FavconError, linkTags } from '../bin/favcon.mjs';
-import { cacheKey, favconVersion } from '../vite/cache.mjs';
+import { build, engineVersions, FavseedError, linkTags } from '../bin/favseed.mjs';
+import { cacheKey, favseedVersion } from '../vite/cache.mjs';
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
@@ -32,7 +32,7 @@ const basePrefix = (base) => (base && base !== '/' ? `/${base.replace(/^\/+|\/+$
 /**
  * Copy a finished set into public/, refusing to clobber anything the integration did not
  * write itself. Overwriting a hand-tuned favicon.ico without a word is the worst possible
- * first impression, so the check is on content: a file favcon wrote has its hash in the stamp.
+ * first impression, so the check is on content: a file favseed wrote has its hash in the stamp.
  */
 const publish = async ({ from, files, publicDir, stampPath, logger }) => {
   let stamp = {};
@@ -44,15 +44,15 @@ const publish = async ({ from, files, publicDir, stampPath, logger }) => {
     const current = sha256(await readFile(target));
     // Already the bytes about to be written. Nothing to protect, and no stamp needed. That
     // is the case after `rm -rf node_modules`, where the stamp is gone but the files in
-    // public/ are still favcon's because the same input and the same tools produce the same
+    // public/ are still favseed's because the same input and the same tools produce the same
     // bytes. Without this, a clean install would accuse the user of hand-editing their own
     // generated favicon.
     if (current === sha256(await readFile(join(from, f)))) continue;
     if (stamp[f] === current) continue;                    // ours, from an earlier build
-    throw new FavconError(
-      `public/${f} already exists and favcon did not write it.\n` +
+    throw new FavseedError(
+      `public/${f} already exists and favseed did not write it.\n` +
       `       Delete it, or point the integration somewhere else, and run again.\n` +
-      `       (favcon will happily replace a file it wrote itself; it will not replace yours.)`,
+      `       (favseed will happily replace a file it wrote itself; it will not replace yours.)`,
     );
   }
 
@@ -74,7 +74,7 @@ const publish = async ({ from, files, publicDir, stampPath, logger }) => {
   logger?.info(`wrote ${files.length} files to public/`);
 };
 
-export default function favcon(options = {}) {
+export default function favseed(options = {}) {
   const {
     input = 'src/logo.svg',
     dev = 'fast',
@@ -83,10 +83,10 @@ export default function favcon(options = {}) {
   } = options;
 
   if (!['fast', 'skip', 'full'].includes(dev)) {
-    throw new Error(`favcon: dev must be 'fast', 'skip' or 'full', got ${JSON.stringify(dev)}`);
+    throw new Error(`favseed: dev must be 'fast', 'skip' or 'full', got ${JSON.stringify(dev)}`);
   }
   if (![true, false, 'inject', 'component'].includes(head)) {
-    throw new Error(`favcon: head must be 'inject', 'component' or false, got ${JSON.stringify(head)}`);
+    throw new Error(`favseed: head must be 'inject', 'component' or false, got ${JSON.stringify(head)}`);
   }
 
   const state = { links: '', inputPath: '', publicDir: '', cacheDir: '', base: '/' };
@@ -101,7 +101,7 @@ export default function favcon(options = {}) {
       ? { ...buildOptions, base: state.base, sizes: [256], mode: 'fast' }
       : { ...buildOptions, base: state.base };
 
-    const key = cacheKey({ version: favconVersion(), source, options: opts, engine: engineVersions() });
+    const key = cacheKey({ version: favseedVersion(), source, options: opts, engine: engineVersions() });
     const slot = join(state.cacheDir, key);
     const stampPath = join(state.cacheDir, 'written.json');
 
@@ -114,7 +114,7 @@ export default function favcon(options = {}) {
 
     // Build into a temp directory and move the finished set into the cache, so an
     // interrupted build cannot leave a half-populated slot that later reads as a hit.
-    const staging = await mkdtemp(join(tmpdir(), 'favcon-astro.'));
+    const staging = await mkdtemp(join(tmpdir(), 'favseed-astro.'));
     try {
       const result = await build({ ...opts, input: state.inputPath, out: staging, onWarn: (m) => logger?.warn(m) });
       await writeFile(join(staging, 'index.json'), JSON.stringify({ files: result.files }));
@@ -134,7 +134,7 @@ export default function favcon(options = {}) {
   };
 
   return {
-    name: 'favcon',
+    name: 'favseed',
     hooks: {
       'astro:config:setup': ({ command, config, addWatchFile, addMiddleware, updateConfig, logger }) => {
         // Nothing to do for either: `sync` only writes types, and `preview` serves what a
@@ -143,7 +143,7 @@ export default function favcon(options = {}) {
 
         state.inputPath = resolve(fileURLToPath(config.root), input);
         state.publicDir = fileURLToPath(config.publicDir);
-        state.cacheDir = join(fileURLToPath(config.root), 'node_modules', '.cache', 'favcon');
+        state.cacheDir = join(fileURLToPath(config.root), 'node_modules', '.cache', 'favseed');
         state.base = basePrefix(config.base);
         state.links = linkTags(state.base, Boolean(buildOptions.manifest));
 
@@ -155,9 +155,9 @@ export default function favcon(options = {}) {
         updateConfig({
           vite: {
             plugins: [{
-              name: 'favcon:virtual',
-              resolveId: (id) => (id === 'virtual:favcon' ? '\0virtual:favcon' : null),
-              load: (id) => (id === '\0virtual:favcon'
+              name: 'favseed:virtual',
+              resolveId: (id) => (id === 'virtual:favseed' ? '\0virtual:favseed' : null),
+              load: (id) => (id === '\0virtual:favseed'
                 ? `export const links = ${JSON.stringify(state.links)};`
                 : null),
             }],
@@ -166,7 +166,7 @@ export default function favcon(options = {}) {
 
         if (head === 'inject') {
           // 'post' so the splice happens after the page has produced its HTML.
-          addMiddleware({ entrypoint: 'favcon/astro/middleware', order: 'post' });
+          addMiddleware({ entrypoint: 'favseed/astro/middleware', order: 'post' });
         } else if (head === false) {
           logger.info(`add these to your <head>:\n${state.links}`);
         }
@@ -182,7 +182,7 @@ export default function favcon(options = {}) {
         } catch (e) {
           // A dev server that will not start because the favicon is unhappy is worse than a
           // dev server with no favicon. The production build still fails, and says why.
-          logger.warn(e instanceof FavconError ? e.message : String(e?.message ?? e));
+          logger.warn(e instanceof FavseedError ? e.message : String(e?.message ?? e));
         }
       },
 
