@@ -458,8 +458,10 @@ const main = async () => {
 
   const results = [];
   for (const n of names) {
+    const sweep = available.get(n);
+    if (typeof sweep !== 'function') { process.stderr.write(`bench: no sweep '${n}'\n`); process.exit(1); }
     process.stderr.write(`bench: ${n}...\n`);
-    const r = await available.get(n)();
+    const r = await sweep();
     results.push({ name: n, ...r });
     process.stdout.write(`\n## ${r.title}\n\n${r.text}\n${r.summary ? '\n' + r.summary + '\n' : ''}`);
   }
