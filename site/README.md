@@ -70,3 +70,5 @@ node test/cdp-check.mjs      # runs the real pipeline in headless Chromium over 
 DevTools protocol with Node's built-in `WebSocket`: no Playwright, no stray listener. It checks
 PNG and ICO magic bytes, not only byte counts, because a broken pipeline still produces files of
 a plausible size. `/check` is the page it drives; open it in a normal browser to watch.
+The browser command defaults to `chromium`; set `CHROME=google-chrome` to use Google Chrome.
+Only these two command names are accepted, and the selected browser must be on `PATH`.

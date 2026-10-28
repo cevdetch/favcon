@@ -18,6 +18,13 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../dist', import.meta.url));
 const PATH = process.argv[2] ?? '/check';
+// Resolve a supported name to a fixed command; CHROME cannot select an arbitrary executable.
+const BROWSERS = new Map([['chromium', 'chromium'], ['google-chrome', 'google-chrome']]);
+const browser = BROWSERS.get(process.env.CHROME ?? 'chromium');
+if (!browser) {
+  console.error('cdp-check: CHROME must be chromium or google-chrome');
+  process.exit(1);
+}
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
   '.css': 'text/css', '.wasm': 'application/wasm', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.json': 'application/json', '.ico': 'image/x-icon' };
@@ -40,8 +47,8 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 const profile = mkdtempSync(join(tmpdir(), 'favseed-cdp.'));
 const PORT = 9333 + (process.pid % 500);
-// CHROME names another Chromium-family binary: CI's runner image has `google-chrome`.
-const chrome = spawn(process.env.CHROME ?? 'chromium', [
+// CI's runner image has google-chrome; local runs default to chromium.
+const chrome = spawn(browser, [
   '--headless', '--disable-gpu', '--no-sandbox', '--mute-audio',
   `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, base + PATH,
 ], { stdio: 'ignore' });
