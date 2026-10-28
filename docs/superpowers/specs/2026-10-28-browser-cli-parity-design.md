@@ -1,6 +1,6 @@
 # Browser and CLI engine parity
 
-Status: proposed for approval, 2026-10-28.
+Status: approved by the user, 2026-10-28. Implementation measurements: `docs/BROWSER-PARITY.md`.
 
 ## Intent
 

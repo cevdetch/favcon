@@ -506,3 +506,32 @@ job is the floor whatever the core count, and the saving is capped at the other 
 Rejected: finishing in turn is not slower by enough to justify a worker pool, its startup cost
 and the code that keeps its output order. The pipeline keeps one job at a time. A release build
 pays for the 512 px icon; `mode: 'fast'` (15 iterations) is the answer where that wait matters.
+
+
+### 28. Browser parity uses the pinned WASI engine in a worker
+
+The browser now runs the same `createEngine()` and `buildSet()` as the CLI, injecting
+`@napi-rs/image-wasm32-wasi` 1.15.0 and `@gfx/zopfli` 1.0.15. Its former resvg-wasm,
+image-q and jsquash substitutes are removed. This completes decision 26's browser path:
+104 actual-browser file hashes over fifteen fixture/options cases match native output,
+including release and fast modes. CLI fixture hashes stay unchanged.
+
+A dedicated worker keeps rendering, quantization, compression and archive creation off the
+page thread. Cancellation terminates it and its nested workers; failed/cancelled builds keep
+the previous downloads. A bounded per-build transparent-render cache reduces placement calls
+in both hosts, and one bounded completed-build cache makes identical browser repeats immediate.
+The browser and CLI share option validation, including mode, manifest, vars and base.
+
+There are costs: the stock WASM is 10.3 MB uncompressed and starts with 250 MiB of shared
+memory. Lazy loading and immutable caching amortize code transfer, not this memory floor.
+Release compression may take longer than the old browser pipeline that skipped Zopfli;
+there is no blanket claim of lower cold-start cost or faster native builds. See
+[BROWSER-PARITY.md](BROWSER-PARITY.md) for measurements and existing accuracy limitations.
+
+Documents and workers require COOP/COEP isolation headers in production, dev and preview.
+The pinned Zopfli CommonJS glue needs a narrow browser transform: it otherwise exports its
+runtime only under Node and leaves browser compression promises queued forever. The transform
+changes exports, not WASM or settings; VM and full file-parity tests cover it.
+
+An extra lossless pass before Zopfli saved no bytes across eleven fixtures, so it is rejected.
+The existing compression settings and serial raster-job policy remain in force.

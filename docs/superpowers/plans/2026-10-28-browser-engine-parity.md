@@ -1,6 +1,6 @@
 # Browser engine parity implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Produce identical browser and CLI files while keeping the page responsive and measuring performance and output improvements.
 
@@ -14,7 +14,7 @@
 
 - Matching source, normalized options, and mode produce identical files and metadata.
 - No uploads or persistent user-data storage; no alternative encoder fallback.
-- Default release iterations remain 120; fast remains 15. Accuracy remains pct <= 1.0%.
+- Default release iterations remain 120; fast remains 15. Preserve the existing pct <= 1.0% non-gradient acceptance checks and documented gradient exception.
 - Placement render cache: per build, at most 16 MiB. Browser result cache: one entry, at most 16 MiB, owned copies.
 - Measure cold and warm costs separately; report the upstream 250 MiB initial shared memory and actual asset sizes.
 - Keep existing CHROME allowlist, CLI API, integration behavior, and output naming.
@@ -33,11 +33,11 @@
 
 **Interfaces:** `buildSet(source, options, {engine, optimiseSvg, name?, warn?, progress?})` retains its return shape. Optional progress callback receives `{phase, completed, total}` with phases `placement`, `raster`, `complete`. Render cache is local to each invocation.
 
-- [ ] Capture existing `node test/hashes.mjs`, `pnpm test`, site build, and four-fixture browser timings/bytes before replacing the browser pipeline.
-- [ ] Add a test wrapping `engine.renderRgba` with a call counter, building `sizes:[180,192]`, and asserting no identical transparent render arguments repeat. Assert progress reaches completed === total and the result bytes/fit equal uncached reference behavior. Watch it fail.
-- [ ] Implement bounded FIFO transparent render reuse, placement reuse by canvas, and progress events without changing render or compression settings. Include cache keys for SVG and size; oversized entries bypass caching.
-- [ ] Run `node --test test/pipeline.mjs` and compare the 66 hashes with baseline; expect pass and identical hashes.
-- [ ] Commit shared pipeline changes with cevdetch coauthor.
+- [x] Capture existing `node test/hashes.mjs`, `pnpm test`, site build, and four-fixture browser timings/bytes before replacing the browser pipeline.
+- [x] Add a test wrapping `engine.renderRgba` with a call counter, building `sizes:[180,192]`, and asserting no identical transparent render arguments repeat. Assert progress reaches completed === total and the result bytes/fit equal uncached reference behavior. Watch it fail.
+- [x] Implement bounded FIFO transparent render reuse, placement reuse by canvas, and progress events without changing render or compression settings. Include cache keys for SVG and size; oversized entries bypass caching.
+- [x] Run `node --test test/pipeline.mjs` and compare the 66 hashes with baseline; expect pass and identical hashes.
+- [x] Commit shared pipeline changes with cevdetch coauthor.
 
 ### Task 2: WASI browser worker and client
 
@@ -45,12 +45,12 @@
 
 **Interfaces:** Client factory `createWorkerClient({createWorker, checkCapabilities})` exposes `warm()`, `build(source, options, {signal?, onProgress?}={})`, and `dispose()`. Public `buildInBrowser(source, options={}, controls={})` preserves manifest=true browser default and returns shared result plus `archive():Uint8Array`. `warm()` warms worker initialization. Worker messages carry `{id,type}`; builds include source/options; success includes result and archive bytes; errors include a message. Cache helper `createBuildCache(limit=16*1024*1024)` exposes `get(key)` and `set(key,result)` with owned copies; `buildKey(source,normalizedOptions)` includes all output options and sorted vars.
 
-- [ ] Add node:test cases for client cancellation during initialization/build, stale messages, progress, errors followed by retry, capability rejection, and cache ownership/limits/key differences. Fake workers emulate the actual protocol, not the image implementation. Watch new behaviors fail.
-- [ ] Replace browser codec dependencies with exact WASI 1.15.0 and Buffer polyfill; retain pinned Zopfli and SVGO. Install through workspace pnpm.
-- [ ] Implement the client, bounded result cache, and worker. Initialize Buffer before dynamic WASI import; inject browser inflate and shared SVG stage/engine/pipeline; create ZIP in worker. Transfer unique owned buffers and leave cache undetached. Normalize on the client before starting expensive work and again only if needed at the trusted worker boundary.
-- [ ] Add COOP/COEP/CORP to production headers, Vite dev/preview and test server. Set worker format `es`, build target for top-level await, and WASI optimization exclusions. Verify nested workers terminate on cancel using the real browser, adding tracked nested worker cleanup if upstream parent termination alone is insufficient.
-- [ ] Run `node --test site/test/worker.mjs`, site build, and current real-browser self-check. Expect worker startup, valid outputs, cancellation/retry, correct headers, and no uncaught browser errors. Debug actual bundler behavior before adding any Vite URL workaround.
-- [ ] Commit worker and hosting changes with cevdetch coauthor.
+- [x] Add node:test cases for client cancellation during initialization/build, stale messages, progress, errors followed by retry, capability rejection, and cache ownership/limits/key differences. Fake workers emulate the actual protocol, not the image implementation. Watch new behaviors fail.
+- [x] Replace browser codec dependencies with exact WASI 1.15.0 and Buffer polyfill; retain pinned Zopfli and SVGO. Install through workspace pnpm.
+- [x] Implement the client, bounded result cache, and worker. Initialize Buffer before dynamic WASI import; inject browser inflate and shared SVG stage/engine/pipeline; create ZIP in worker. Transfer unique owned buffers and leave cache undetached. Normalize on the client before starting expensive work and again only if needed at the trusted worker boundary.
+- [x] Add COOP/COEP/CORP to production headers, Vite dev/preview and test server. Set worker format `es`, build target for top-level await, and WASI optimization exclusions. Verify nested workers terminate on cancel using the real browser, adding tracked nested worker cleanup if upstream parent termination alone is insufficient.
+- [x] Run `node --test site/test/worker.mjs`, site build, and current real-browser self-check. Expect worker startup, valid outputs, cancellation/retry, correct headers, and no uncaught browser errors. Debug actual bundler behavior before adding any Vite URL workaround.
+- [x] Commit worker and hosting changes with cevdetch coauthor.
 
 ### Task 3: Browser parity and usable controls
 
@@ -58,11 +58,11 @@
 
 **Interfaces:** The check page exposes test-only `window.favseedCheck` methods to build supplied SVG/options and return hashes, metadata, archive verification, timings, and lifecycle diagnostics. Node harness generates native references with `buildFiles()`/`buildSet()`, passes SVG/options through CDP, and compares every filename, hash, fit, links, and animation value. No production endpoint or native fixture artifacts.
 
-- [ ] Add actual-browser parity checks for eleven fast-mode fixtures; release-mode tiles and gradient; targeted cases covering none background, fixed padding, 180/32 aliases, manifest extras, base, vars and animation off. First verify old pipeline fails byte comparison against native references.
-- [ ] Add real worker cancellation/retry, cached alias-buffer mutation, progress, responsiveness timer, isolation, and ZIP-entry verification to browser checks. Check UI retains prior links across cancellation/failure and object URLs are replaced on success.
-- [ ] Add release/fast select, Cancel control, progress updates, abort signals and stale submit protection. Retain successful results until a new success; revoke object URLs on replacement/page teardown. Replace obsolete differing-bytes explanation with tested matching-option parity and truthful loading costs.
-- [ ] Run unit tests, site build and full CDP matrix within bounded CI time. Smoke-test Vite dev and preview worker initialization with headers. Expect all file hashes and shared metadata equal native references.
-- [ ] Commit parity checks and UI with cevdetch coauthor.
+- [x] Add actual-browser parity checks for eleven fast-mode fixtures; release-mode tiles and gradient; targeted cases covering none background, fixed padding, 180/32 aliases, manifest extras, base, vars and animation off. First verify old pipeline fails byte comparison against native references.
+- [x] Add real worker cancellation/retry, cached alias-buffer mutation, progress, responsiveness timer, isolation, and ZIP-entry verification to browser checks. Check UI retains prior links across cancellation/failure and object URLs are replaced on success.
+- [x] Add release/fast select, Cancel control, progress updates, abort signals and stale submit protection. Retain successful results until a new success; revoke object URLs on replacement/page teardown. Replace obsolete differing-bytes explanation with tested matching-option parity and truthful loading costs.
+- [x] Run unit tests, site build and full CDP matrix within bounded CI time. Smoke-test Vite dev and preview worker initialization with headers. Expect all file hashes and shared metadata equal native references.
+- [x] Commit parity checks and UI with cevdetch coauthor.
 
 ### Task 4: Measurements, compression experiment and final verification
 

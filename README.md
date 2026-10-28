@@ -21,10 +21,11 @@ icon-512.png             2704 B  mark at 408px of 512 in the safe zone
 (That is `test/fixtures/general.svg`, a two-colour mark, at the defaults. Your bytes depend on
 your mark; `node bench/bench.mjs` measures the whole corpus.)
 
-No install at all: **[favseed.cevdet.ch](https://favseed.cevdet.ch)** runs the same SVG stage in
-your browser, with nothing uploaded. Its SVGs are byte-identical to the CLI's; its PNGs come
-from a substitute raster stage in WASM: within a few percent of the CLI's on flat marks, 14 %
-larger on a gradient, and the page shows the numbers.
+No install at all: **[favseed.cevdet.ch](https://favseed.cevdet.ch)** runs the same engine and
+build pipeline in your browser, with nothing uploaded. Matching input, options, and build mode
+produce identical files. The page includes a manifest; use `--manifest` for the matching CLI
+set. Builds run in a worker with progress and cancellation; see [browser requirements and
+measurements](site/README.md).
 
 Add the links to your `<head>`. `favseed --html` prints them:
 
