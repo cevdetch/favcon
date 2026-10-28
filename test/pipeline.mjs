@@ -45,4 +45,23 @@ describe('buildSet', () => {
   it('rejects a translucent ground before rendering anything', async () => {
     await assert.rejects(run('flat', { bg: '#ffffff80' }), /--bg must be opaque/);
   });
+
+  it('reuses transparent placement renders and reports completed raster jobs', async () => {
+    const calls = new Map(), events = [];
+    const counted = { ...engine, renderRgba: async (svg, px) => {
+      const key = `${svg}\0${px}`;
+      calls.set(key, (calls.get(key) ?? 0) + 1);
+      return engine.renderRgba(svg, px);
+    } };
+    const options = opts({ sizes: [180, 192] });
+    const actual = await buildSet(read('general'), options,
+      { engine: counted, optimiseSvg, progress: (event) => events.push(event) });
+    assert.ok([...calls.values()].every((n) => n === 1), 'each placement render is reused');
+    assert.equal(events[0].phase, 'placement');
+    assert.deepEqual(events.at(-1), { phase: 'complete', completed: 3, total: 3 });
+    assert.deepEqual(events.filter((e) => e.phase === 'raster').map((e) => e.completed), [0, 1, 2, 3]);
+    const expected = await buildSet(read('general'), options, { engine, optimiseSvg });
+    assert.deepEqual(actual, expected);
+    assert.deepEqual(actual.files[3].bytes, actual.files[4].bytes, '180px alias matches apple');
+  });
 });
