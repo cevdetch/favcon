@@ -29,7 +29,7 @@ The browser imports the same `lib/core.mjs`, `lib/config.mjs`, `lib/engine.mjs`,
 Matching source, normalized options, and mode produce identical files, links, and placement.
 The browser includes a manifest by default; the CLI needs `--manifest` to match.
 
-Release mode uses 120 Zopfli iterations; fast mode uses 15, matching `--mode fast`.
+Release mode uses 120 Zopfli iterations; fast mode uses 15, matching `mode: 'fast'` in the CLI config.
 Both run in a dedicated module worker, keeping the page responsive. Cancel terminates the
 worker and its children. The previous successful downloads remain usable after a failed or
 cancelled build. One completed set is cached in memory, at most 16 MiB, with owned copies;
@@ -78,3 +78,31 @@ Only these command names are accepted, and the browser must be on `PATH`.
 `FAVSEED_BENCH=1` measures initialization and four release-mode fixtures.
 To exercise an already-running dev or preview server, set
 `FAVSEED_ORIGIN=http://127.0.0.1:4321` (only local HTTP origins are accepted).
+
+### Other browsers and mobile emulation
+
+The pinned Playwright suite runs desktop Chromium, Firefox and WebKit, plus Pixel 7 and
+iPhone 13 emulation. It reuses the native references: all 15 cases on desktop, and four
+representative cases on mobile (gradient, release compression, transparent aliases and custom
+manifest/animation options). It also checks cache ownership, ZIP downloads, page timers,
+cancellation/retry, failure preservation, missing document/worker isolation and touch controls
+at a 320 px viewport. The document and worker both validate their own WASM requirements.
+
+After building, install the test browsers and run the suite:
+
+```sh
+pnpm --filter favseed-site exec playwright install --with-deps chromium firefox webkit
+pnpm --filter favseed-site test:browser
+pnpm --filter favseed-site test:browser --project=firefox
+```
+
+Browser downloads are separate from package installation. Use a Playwright-supported host;
+`--with-deps` installs system dependencies on supported Linux distributions. CI runs each
+project on Ubuntu 24.04, with one test worker and no automatic retries. Failed runs retain
+traces and screenshots for three days.
+
+WebKit testing does not establish compatibility with a particular released Safari version.
+Mobile profiles emulate viewport, touch and device parameters on desktop engines. Real iOS
+Safari and Android Chrome still need device checks, including memory pressure, the native file
+picker and saving/opening the generated ZIP. The engine's 250 MiB initial shared memory makes
+that device verification especially relevant before release.

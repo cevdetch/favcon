@@ -127,6 +127,46 @@ jobs:
         env:
           CHROME: google-chrome
 
+  browsers:
+    # Playwright covers the other engines and mobile emulation. Keep CDP above for
+    # Chromium-specific nested-worker cleanup and back/forward-cache checks.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium
+            engine: chromium
+          - project: firefox
+            engine: firefox
+          - project: webkit
+            engine: webkit
+          - project: mobile-chrome
+            engine: chromium
+          - project: mobile-webkit
+            engine: webkit
+    env:
+      BROWSER_PROJECT: ${{ matrix.project }}
+      BROWSER_ENGINE: ${{ matrix.engine }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          runtime: node@24
+          require-lockfile: true
+      - run: pnpm --filter favseed-site exec playwright install --with-deps "$BROWSER_ENGINE"
+      - run: pnpm --filter favseed-site build
+      - run: pnpm --filter favseed-site test:browser --project="$BROWSER_PROJECT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: browser-failure-${{ matrix.project }}
+          path: site/test-results/
+          retention-days: 3
+
   workflows:
     # Static analysis of the workflows themselves: template injection, over-broad
     # permissions, unpinned actions. zizmor's own version is pinned like every other tool.

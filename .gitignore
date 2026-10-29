@@ -5,3 +5,4 @@ bench/out/
 site/dist/
 site/node_modules/
 site/.astro/
+site/test-results/

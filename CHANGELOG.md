@@ -11,6 +11,12 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Validate WASM requirements inside the image worker as well as the page, so missing worker
+  isolation fails clearly even when a browser still exposes shared memory.
+- Add CI browser parity and lifecycle checks for Firefox, WebKit and Chromium, with mobile
+  Chrome/WebKit emulation and touch/download checks at 320 px.
+- Correct browser instructions for selecting the CLI's fast mode through its config file.
+
 - Browser and CLI now use the same pinned image engine, compression, shared options and build
   pipeline, with byte parity checked in Chromium. Browser builds run in a worker, support
   release/fast modes and cancellation, preserve previous downloads on failure, and cache one
