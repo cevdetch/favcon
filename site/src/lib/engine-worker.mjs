@@ -6,16 +6,20 @@ import { createEngine } from '../../../lib/engine.mjs';
 import { buildSet } from '../../../lib/pipeline.mjs';
 import { createBuildCache, buildKey } from './build-cache.mjs';
 import { zip } from './zip.mjs';
+import { checkCapabilities } from './capabilities.mjs';
 
 globalThis.Buffer ??= Buffer;
 const { optimiseSvg } = createSvgStage({ optimize, builtinPlugins });
 const cache = createBuildCache();
 let loading;
-const load = () => (loading ??= import('@napi-rs/image-wasm32-wasi').then((image) => createEngine({
-  image, zopfli,
-  inflate: async (bytes) => new Uint8Array(await new Response(
-    new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()),
-})).catch((error) => { loading = undefined; throw error; }));
+const load = () => {
+  checkCapabilities();
+  return (loading ??= import('@napi-rs/image-wasm32-wasi').then((image) => createEngine({
+    image, zopfli,
+    inflate: async (bytes) => new Uint8Array(await new Response(
+      new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer()),
+  })).catch((error) => { loading = undefined; throw error; }));
+};
 
 self.onmessage = async ({ data: { id, type, source, options } }) => {
   let initialized = false;

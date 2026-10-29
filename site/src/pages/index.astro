@@ -91,7 +91,7 @@ const outputs = [
     <label><input type="checkbox" name="animation" checked /> Keep the animation in <code>logo.svg</code></label>
     <label>Build mode
       <select name="mode"><option value="release">Release — smallest files</option><option value="fast">Fast — quicker compression</option></select>
-      <small>Matches the CLI's <code>--mode</code>. Fast files can be larger.</small>
+      <small>Matches the CLI's <code>mode</code> config option. Fast files can be larger.</small>
     </label>
     <button type="submit">Generate</button>
     <button type="button" id="cancel" hidden>Cancel</button>
@@ -125,8 +125,8 @@ const outputs = [
     <p>This page runs the same pinned image engine and build pipeline as the command line.
       Matching SVG, options, and build mode produce identical SVG, PNG, ICO, and manifest
       files. Builds run in a worker so the page stays responsive; Cancel stops the build.</p>
-    <p>Release mode uses the CLI's full compression. Fast mode matches <code>--mode fast</code>
-      and trades some file size for build time. This page includes a manifest; use
+    <p>Release mode uses the CLI's full compression. Fast mode matches <code>mode: 'fast'</code>
+      in the CLI config and trades some file size for build time. This page includes a manifest; use
       <code>--manifest</code> for the matching CLI set.</p>
     <p>The engine loads after you choose a file. Its WASM is about 10.3 MB before transfer
       compression and starts with 250 MiB of shared memory. A recent browser on HTTPS with
