@@ -3,10 +3,6 @@ import { test } from 'node:test';
 import { createBuildCache, buildKey } from '../src/lib/build-cache.mjs';
 import { createWorkerClient } from '../src/lib/worker-client.mjs';
 import { normaliseOptions } from '../../lib/config.mjs';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { runInNewContext } from 'node:vm';
-import { zopfliBrowser } from '../build/zopfli-browser.mjs';
 import { zip } from '../src/lib/zip.mjs';
 
 test('ZIP entries use a valid fixed DOS epoch date', () => {
@@ -15,21 +11,6 @@ test('ZIP entries use a valid fixed DOS epoch date', () => {
   // DOS packs the year since 1980, month, and day: Jan 1 1980 is 0x0021.
   assert.equal(view.getUint16(12, true), 0x0021);
   assert.deepEqual(zip(files), bytes);
-});
-
-test('Zopfli browser glue exports the initialized runtime', async () => {
-  const require = createRequire(import.meta.url);
-  const file = require.resolve('@gfx/zopfli/dist/libzopfli.js');
-  const source = readFileSync(file, 'utf8');
-  const module = { exports: {} };
-  const context = { module, require: createRequire(file), WebAssembly, console,
-    self: { location: { href: 'https://localhost/zopfli.js' } }, importScripts() {} };
-  const plugin = zopfliBrowser();
-  const transformed = plugin.transform(source, file);
-  runInNewContext(transformed.code, context);
-  assert.equal(typeof module.exports._compress, 'function');
-  await new Promise((resolve) => { module.exports.onRuntimeInitialized = resolve; });
-  assert.ok(module.exports.calledRun);
 });
 
 const result = () => ({ files: [{ name: 'x.png', bytes: Uint8Array.of(1, 2) }],
@@ -58,6 +39,12 @@ test('cache key includes all output options and normalizes vars order', () => {
     { sizes: [32, 180] }, { animation: false }]) assert.notEqual(key(extra), key());
   assert.notEqual(key({}, '<svg />'), key());
   assert.equal(key({ vars: { a: 'red', b: 'blue' } }), key({ vars: { b: 'blue', a: 'red' } }));
+});
+
+test('cache distinguishes manifest members omitted by JSON.stringify', () => {
+  const key = (manifest) => buildKey('<svg/>', normaliseOptions({ manifest }));
+  assert.notEqual(key({}), key({ name: undefined }));
+  assert.notEqual(key({ name: null }), key({ name: undefined }));
 });
 
 const setup = () => {

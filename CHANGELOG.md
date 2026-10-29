@@ -17,6 +17,8 @@ minor at minimum, never patch.** Downstream users diff these files into git.
   completed build. Placement renders are reused within a bounded per-build cache in both hosts.
 - Browser hosting now supplies cross-origin isolation headers for shared WASM memory.
 - Correct the ZIP writer's fixed DOS date to 1 January 1980.
+- Keep generated download URLs alive when the browser preserves the page for Back/Forward
+  navigation, and key cached manifests by the shared emitter's exact output.
 
 - Rename the unpublished project to Favseed: package, CLI, configuration files,
   Astro/Vite imports and public API names. Existing local configurations must use

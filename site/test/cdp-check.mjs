@@ -212,14 +212,24 @@ try {
   await evaluate('document.querySelector("input[name=bg]").value="#ffffff80"; document.querySelector("form").requestSubmit()');
   await waitFor('document.querySelector("output").className === "bad" && !document.querySelector("button[type=submit]").disabled');
   assert.equal(await evaluate('document.getElementById("zip").href'), download);
-  assert.ok(await evaluate(`(async () => (await (await fetch(${JSON.stringify(download)})).arrayBuffer()).byteLength > 100)()`));
+  assert.ok(await evaluate('(async () => (await (await fetch(document.getElementById("zip").href)).arrayBuffer()).byteLength > 100)()'));
   await evaluate('document.querySelector("input[name=bg]").value="#000000"; document.querySelector("input[name=padding]").value="20"; document.querySelector("form").requestSubmit()');
   await waitFor('!document.getElementById("cancel").hidden');
   await evaluate('document.getElementById("cancel").click()');
   await waitFor('document.querySelector("output").textContent === "Cancelled."');
   await noWorkers();
   assert.equal(await evaluate('document.getElementById("zip").href'), download);
-  assert.ok(await evaluate(`(async () => (await (await fetch(${JSON.stringify(download)})).arrayBuffer()).byteLength > 100)()`));
+  assert.ok(await evaluate('(async () => (await (await fetch(document.getElementById("zip").href)).arrayBuffer()).byteLength > 100)()'));
+  // A preserved history entry must keep its visible result downloads alive.
+  await evaluate('window.favseedHistoryMarker = true; window.addEventListener("pageshow", (event) => { window.favseedHistoryRestored = event.persisted; })');
+  await send('Page.navigate', { url: base + '/check' });
+  await waitFor('!!window.favseedCheck');
+  await evaluate('history.back()');
+  await waitFor('window.favseedHistoryMarker === true');
+  assert.equal(await evaluate('window.favseedHistoryRestored'), true, 'restored from back/forward cache');
+  assert.equal(await evaluate('document.getElementById("result").hidden'), false);
+  assert.equal(await evaluate('document.getElementById("zip").href'), download);
+  assert.ok(await evaluate('(async () => (await (await fetch(document.getElementById("zip").href)).arrayBuffer()).byteLength > 100)()'));
   assert.equal(noise.filter((line) => /^(uncaught:|log:|console.error:)/.test(line)).length, 0, noise.join('\n'));
   clearTimeout(watchdog);
   await finish(0, 'OK: native/browser parity, archive, cache, responsiveness, cancellation and retry');

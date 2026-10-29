@@ -248,10 +248,11 @@ const outputs = [
     active?.abort();
     pipeline?.then((m) => m.dispose()).catch(() => {});
   });
-  window.addEventListener('pagehide', () => {
+  window.addEventListener('pagehide', (event) => {
     active?.abort();
     pipeline?.then((m) => m.dispose()).catch(() => {});
-    for (const u of urls) URL.revokeObjectURL(u);
+    // BFCache restores this DOM and its links; their URLs must survive with it.
+    if (!event.persisted) for (const u of urls) URL.revokeObjectURL(u);
   });
 </script>
 </body>

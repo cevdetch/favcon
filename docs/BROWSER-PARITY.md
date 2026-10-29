@@ -59,6 +59,8 @@ including release compression. Heavy work now runs in a dedicated worker. The ch
 confirms cancellation during initialization and raster work, clean retry, and zero remaining
 nested worker targets after cancellation. Form tests verify that previous downloads remain
 usable after failure and cancellation. Development and preview smoke checks pass too.
+An actual navigation-away-and-Back regression also verifies that a page restored from the
+back/forward cache keeps its visible previews and download URLs usable.
 
 ## Build time and loading costs
 

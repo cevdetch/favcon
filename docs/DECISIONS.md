@@ -531,7 +531,8 @@ there is no blanket claim of lower cold-start cost or faster native builds. See
 Documents and workers require COOP/COEP isolation headers in production, dev and preview.
 The pinned Zopfli CommonJS glue needs a narrow browser transform: it otherwise exports its
 runtime only under Node and leaves browser compression promises queued forever. The transform
-changes exports, not WASM or settings; VM and full file-parity tests cover it.
+changes exports, not WASM or settings; real-browser compression and full file-parity tests
+cover it. Tests do not evaluate dependency source in a VM.
 
 An extra lossless pass before Zopfli saved no bytes across eleven fixtures, so it is rejected.
 The existing compression settings and serial raster-job policy remain in force.

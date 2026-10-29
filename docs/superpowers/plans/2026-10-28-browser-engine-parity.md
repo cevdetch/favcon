@@ -70,7 +70,7 @@
 
 **Interfaces:** Benchmark emits comparable native/browser cold, first, warm and repeated timings, output byte totals, and built transfer sizes. Keep raw evidence in the execution workspace and summarize reproducible commands in documentation.
 
-- [ ] Measure interleaved native baseline/candidate lossless reoptimization of quantized PNGs using the fixture corpus; assert equal decoded pixels and record time/byte deltas. Keep candidate only with worthwhile measured benefit; if retained add a failing engine regression first, then implementation.
-- [ ] Run required benchmark sweeps and default accuracy checks. Record per-fixture output changes and worst accuracy, avoiding aggregate-only quality claims.
-- [ ] Run `pnpm test`, all browser worker tests, full site parity matrix, hashes, production build, development smoke test, and `git diff --check`. Confirm no security regression and review actual dependency/bundle changes.
-- [ ] Document measured wins and costs, complete task ledger, commit with coauthor, then request fresh whole-branch code review. Fix important findings with regression tests and verify the relevant suite before reporting completion.
+- [x] Measure interleaved native baseline/candidate lossless reoptimization of quantized PNGs using the fixture corpus; assert equal decoded pixels and record time/byte deltas. Keep candidate only with worthwhile measured benefit; if retained add a failing engine regression first, then implementation.
+- [x] Run required benchmark sweeps and default accuracy checks. Record per-fixture output changes and worst accuracy, avoiding aggregate-only quality claims.
+- [x] Run `pnpm test`, all browser worker tests, full site parity matrix, hashes, production build, development smoke test, and `git diff --check`. Confirm no security regression and review actual dependency/bundle changes.
+- [x] Document measured wins and costs, complete task ledger, commit with coauthor, then request fresh whole-branch code review. Fix important findings with regression tests and verify the relevant suite before reporting completion.
