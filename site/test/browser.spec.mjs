@@ -101,7 +101,9 @@ test('form downloads match native and survive failed and cancelled builds', asyn
   await expect(page.locator('#zip')).toHaveAttribute('href', url);
   expect(await page.evaluate(async () => (await (await fetch(document.getElementById('zip').href)).arrayBuffer()).byteLength)).toBe(zip.length);
   if (isMobile) {
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const layout = await page.evaluate(() => ({ width: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth }));
+    expect(layout.width).toBeLessThanOrEqual(layout.viewport);
     expect(await page.evaluate(() => window.favseedTouches)).toBeGreaterThan(0);
     for (const control of ['button[type=submit]', '#zip']) {
       expect((await page.locator(control).boundingBox()).height).toBeGreaterThanOrEqual(44);
