@@ -11,6 +11,15 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Browser and CLI now use the same pinned image engine, compression, shared options and build
+  pipeline, with byte parity checked in Chromium. Browser builds run in a worker, support
+  release/fast modes and cancellation, preserve previous downloads on failure, and cache one
+  completed build. Placement renders are reused within a bounded per-build cache in both hosts.
+- Browser hosting now supplies cross-origin isolation headers for shared WASM memory.
+- Correct the ZIP writer's fixed DOS date to 1 January 1980.
+- Keep generated download URLs alive when the browser preserves the page for Back/Forward
+  navigation, and key cached manifests by the shared emitter's exact output.
+
 - Rename the unpublished project to Favseed: package, CLI, configuration files,
   Astro/Vite imports and public API names. Existing local configurations must use
   `favseed.config.*`; no optimisation settings or icon formats change.

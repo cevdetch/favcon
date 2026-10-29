@@ -61,7 +61,7 @@ output { grid-column: 1 / -1; min-block-size: 1lh; font-size: 0.9rem; color: var
 /* 1rem, not the label's 0.9: below 16px iOS zooms the page on focus. min-inline-size: 0 lets a
    field shrink to its column instead of overflowing it at its ~20ch default. A checkbox ignores
    all of this, so it needs no :not(). */
-input {
+input, select {
   min-inline-size: 0; font: inherit; font-size: 1rem; font-weight: 400; color: inherit;
   padding: 0.45rem 0.6rem; background: var(--page); border: 1px solid var(--line); border-radius: 7px;
   &:user-invalid { border-color: var(--bad); }
@@ -72,6 +72,7 @@ button, .button {
   color: var(--card); background: var(--accent); border: 0; border-radius: 8px;
   &:disabled { opacity: 0.45; cursor: progress; }
 }
+[hidden] { display: none !important; }
 
 figure {
   display: inline-grid; justify-items: center; gap: 0.35rem; margin: 0 1rem 1.25rem 0;

@@ -2,18 +2,18 @@
   "name": "favseed-site",
   "private": true,
   "type": "module",
-  "description": "favseed in the browser: the same SVG stage, a WASM raster stage, nothing uploaded.",
+  "description": "favseed in the browser: the same engine and bytes as the CLI, nothing uploaded.",
   "scripts": {
     "dev": "astro dev",
+    "test": "node --test test/worker.mjs",
     "build": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {
-    "@jsquash/oxipng": "^2.3.0",
-    "@jsquash/png": "^3.1.1",
-    "@resvg/resvg-wasm": "^2.6.2",
+    "@gfx/zopfli": "1.0.15",
+    "@napi-rs/image-wasm32-wasi": "1.15.0",
     "astro": "^7.3.8",
-    "image-q": "^4.0.0",
+    "buffer": "^6.0.3",
     "svgo": "^4.1.0"
   },
   "devDependencies": {

@@ -1,84 +1,93 @@
 ---
-// A self-check page, in the spirit of the CLI's test suite: it runs the real browser pipeline
-// over a fixture and prints what came out, so "does this work in a browser" is a page you can
-// open rather than a claim. test/cdp-check.mjs drives it in headless Chromium.
-//
-// The fixture is imported INSIDE the module script below, not here and passed via define:vars:
-// define:vars implies is:inline, Astro then leaves the script unprocessed, and its relative
-// import resolves against the site root and 404s. That failure is indistinguishable from a hang.
+// The CDP harness supplies source and native references. No fixtures or reference endpoint
+// are shipped in the public bundle.
 ---
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>favseed browser self-check</title>
-<meta name="robots" content="noindex" /></head>
-<body>
-<h1>favseed browser self-check</h1>
-<p>Runs the pipeline over four fixtures in this tab, flat to gradient.</p>
-<pre id="out">running…</pre>
+<title>favseed browser self-check</title><meta name="robots" content="noindex" /></head>
+<body><h1>favseed browser self-check</h1><pre id="out">loading…</pre>
 <script>
-  import { buildInBrowser } from '../lib/pipeline.mjs';
-  // Four marks, not one: a flat pixel-grid mark is the easy case for a quantiser, and a
-  // gradient is the hard one. Reporting only the first would flatter the page.
-  import tiles from '../../../test/fixtures/tiles.svg?raw';
-  import general from '../../../test/fixtures/general.svg?raw';
-  import gradient from '../../../test/fixtures/gradient.svg?raw';
-  import heavy from '../../../test/fixtures/heavy.svg?raw';
-
-  const out = document.getElementById('out');
-  const lines = [];
-  const sig = [0x89, 0x50, 0x4e, 0x47];
-  try {
-    for (const [name, svg] of [['tiles', tiles], ['general', general], ['gradient', gradient], ['heavy', heavy]]) {
-      const t0 = performance.now();
-      const built = await buildInBrowser(svg, { sizes: [192, 512], bg: '#000000' });
-      lines.push(`mark ${name} ms=${Math.round(performance.now() - t0)} animated=${built.animated}`);
-      for (const f of built.files) lines.push(`  file ${name} ${f.name} ${f.bytes.length}`);
-      lines.push(`  fit ${name} apple=${built.fit.apple.box}/${built.fit.apple.canvas}` +
-                 ` icon512=${built.fit.icons[512].box}/${built.fit.icons[512].canvas}` +
-                 ` snapped=${built.fit.icons[512].snapped}`);
-      // A byte count alone would not notice a pipeline emitting plausible-looking rubbish.
-      for (const f of built.files) {
-        if (f.name.endsWith('.png') && !sig.every((b, i) => f.bytes[i] === b)) throw new Error(`${name}/${f.name} is not a PNG`);
-        if (f.name.endsWith('.svg') && new TextDecoder().decode(f.bytes.slice(0, 4)) !== '<svg') throw new Error(`${name}/${f.name} is not an SVG`);
-      }
-      const ico = built.files.find((f) => f.name === 'favicon.ico');
-      if (!ico || ![0, 0, 1, 0].every((b, i) => ico.bytes[i] === b)) throw new Error(`${name}: bad ICO header`);
-      if (built.archive().length < 100) throw new Error(`${name}: the archive is empty`);
-      if (built.files.some((f) => f.name.startsWith('icon-maskable'))) {
-        throw new Error(`${name}: the browser still writes a separate maskable icon`);
-      }
-      const manifest = JSON.parse(new TextDecoder().decode(
-        built.files.find((f) => f.name === 'site.webmanifest').bytes));
-      if (manifest.icons[0].purpose !== 'any maskable') {
-        throw new Error(`${name}: manifest purpose is ${manifest.icons[0].purpose}`);
-      }
+  import { buildInBrowser, warm, dispose } from '../lib/pipeline.mjs';
+  const hash = async (bytes) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
+    (n) => n.toString(16).padStart(2, '0')).join('');
+  const summary = async (built) => ({
+    files: await Promise.all(built.files.map(async ({ name, bytes }) => ({ name, hash: await hash(bytes), size: bytes.length }))),
+    fit: built.fit, links: built.links, animated: built.animated,
+  });
+  const checkArchive = (built) => {
+    const archive = built.archive(), view = new DataView(archive.buffer);
+    let at = 0;
+    for (const file of built.files) {
+      if (view.getUint32(at, true) !== 0x04034b50 || view.getUint16(at + 8, true) !== 0 ||
+          view.getUint16(at + 10, true) !== 0 || view.getUint16(at + 12, true) !== 0x0021) throw new Error('Bad ZIP header');
+      const length = view.getUint32(at + 18, true), nameLength = view.getUint16(at + 26, true);
+      const extra = view.getUint16(at + 28, true);
+      const name = new TextDecoder().decode(archive.subarray(at + 30, at + 30 + nameLength));
+      const offset = at + 30 + nameLength + extra;
+      if (name !== file.name || length !== file.bytes.length ||
+          !file.bytes.every((b, i) => b === archive[offset + i])) throw new Error('ZIP file differs: ' + file.name);
+      at = offset + length;
     }
-    // Invalid options must fail with the same messages as the CLI, not with near-empty icons
-    // and no message, or an "internal error" from the placement maths.
-    for (const bad of ['foo', 90, -5]) {
-      let threw = null;
+    if (view.getUint32(at, true) !== 0x02014b50) throw new Error('Missing ZIP directory');
+  };
+  window.favseedCheck = {
+    isolated: globalThis.crossOriginIsolated,
+    warm, dispose,
+    async unsupported() {
+      dispose();
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crossOriginIsolated');
+      Object.defineProperty(globalThis, 'crossOriginIsolated', { configurable: true, value: false });
       try {
-        await buildInBrowser(tiles, { colors: 8, sizes: [192], bg: '#000000', padding: bad });
-      } catch (e) { threw = e?.message ?? String(e); }
-      if (!threw || !/--padding must be 'auto' or a percentage 0-45/.test(threw)) {
-        throw new Error(`padding ${JSON.stringify(bad)} was accepted (${threw ?? 'no error'})`);
+        await warm();
+        throw new Error('Unsupported environment accepted');
+      } catch (e) {
+        if (!/cross-origin isolation.*favseed CLI/.test(e.message)) throw e;
+        return true;
+      } finally {
+        if (descriptor) Object.defineProperty(globalThis, 'crossOriginIsolated', descriptor);
+        else delete globalThis.crossOriginIsolated;
       }
-    }
-    {
-      let threw = null;
+    },
+    async build(source, options) {
+      let ticks = 0, maxGap = 0, last = performance.now();
+      const timer = setInterval(() => { const now = performance.now(); maxGap = Math.max(maxGap, now - last); last = now; ticks++; }, 20);
+      const start = performance.now(), progress = [];
       try {
-        await buildInBrowser(tiles, { colors: 8, sizes: [33], bg: '#000000' });
-      } catch (e) { threw = e?.message ?? String(e); }
-      if (!threw || !/--sizes takes even pixel sizes/.test(threw)) {
-        throw new Error(`sizes [33] was accepted (${threw ?? 'no error'})`);
+        const built = await buildInBrowser(source, options, { onProgress: (e) => progress.push(e) });
+        const ms = performance.now() - start;
+        checkArchive(built);
+        return { ...(await summary(built)), ms, ticks, maxGap, progress, archiveHash: await hash(built.archive()) };
+      } finally { clearInterval(timer); }
+    },
+    async cache(source, options) {
+      const first = await buildInBrowser(source, options), expected = structuredClone(await summary(first));
+      const archive = first.archive(); archive.fill(0);
+      for (const file of first.files) file.bytes.fill(0);
+      first.fit.apple.box = -1;
+      const second = await buildInBrowser(source, options);
+      checkArchive(second);
+      if (JSON.stringify(await summary(second)) !== JSON.stringify(expected)) throw new Error('Cache bytes or metadata were mutated');
+      return true;
+    },
+    async cancel(source, options, phase) {
+      const controller = new AbortController();
+      const timer = phase === 'initialization' ? setTimeout(() => controller.abort(), 5) : undefined;
+      try {
+        await buildInBrowser(source, options, { signal: controller.signal,
+          onProgress: (e) => { if (e.phase === phase) setTimeout(() => controller.abort(), 10); } });
+        throw new Error('Cancelled build resolved');
+      } catch (e) { if (e.name !== 'AbortError') throw e; return true; }
+      finally { clearTimeout(timer); }
+    },
+    async invalid(source) {
+      for (const options of [{ padding: 'foo' }, { sizes: [33] }, { colors: 300 }, { mode: 'unknown' }]) {
+        let rejected = false;
+        try { await buildInBrowser(source, options); } catch { rejected = true; }
+        if (!rejected) throw new Error('Invalid options accepted');
       }
-    }
-    lines.push('OK');
-  } catch (e) {
-    lines.push(`FAIL ${e?.message ?? e}`);
-  }
-  out.textContent = lines.join('\n');
-</script>
-</body>
-</html>
+      return true;
+    },
+  };
+  document.getElementById('out').textContent = 'ready';
+</script></body></html>
