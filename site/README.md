@@ -40,7 +40,9 @@ no source or result is persisted or uploaded.
 The WASM asset is 10,322,976 bytes before transfer compression, and the upstream loader starts
 with 250 MiB of shared memory. Loading is lazy, after selecting an SVG. This improves page
 responsiveness and repeated builds, but does not promise lower startup cost or memory use.
-See [measurements](../docs/BROWSER-PARITY.md) for size and timing tradeoffs.
+Across four measured fixtures, PNGs total 40,384 → 36,848 bytes (8.8% smaller overall;
+the heavy fixture grows 5.9%). Release builds take longer on three of the four fixtures
+because they now include Zopfli compression; fast mode reduces compression time.
 
 Use HTTPS (or localhost), SharedArrayBuffer, DecompressionStream, and cross-origin isolation.
 The build writes Cloudflare Pages `_headers` with COOP `same-origin`, COEP `require-corp`,
