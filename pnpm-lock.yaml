@@ -109,9 +109,6 @@ importers:
 
   .:
     dependencies:
-      '@gfx/zopfli':
-        specifier: 1.0.15
-        version: 1.0.15
       '@napi-rs/image':
         specifier: 1.15.0
         version: 1.15.0
@@ -122,6 +119,9 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
     devDependencies:
+      '@gfx/zopfli':
+        specifier: 1.0.15
+        version: 1.0.15
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.1
@@ -134,9 +134,6 @@ importers:
       '@astrojs/sitemap':
         specifier: ^3.7.4
         version: 3.7.4
-      '@gfx/zopfli':
-        specifier: 1.0.15
-        version: 1.0.15
       '@napi-rs/image-wasm32-wasi':
         specifier: 1.15.0
         version: 1.15.0

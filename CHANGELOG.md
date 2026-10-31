@@ -11,6 +11,26 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Add PNG/ICO quality 1–100 across CLI, config/API, integrations and browser. Default 80
+  balances size and fidelity; explicit 100 restores the previous bytes. Custom colors without quality
+  retain the fixed-palette path; explicit quality below 100 cannot combine with colors.
+  Keep Zopfli independent and opt-in.
+
+- Skip Zopfli by default; opt in with `--zopfli`, `zopfli: true`, or the browser's extra
+  compression control. Release/fast effort remains 120/15 when enabled.
+- Emit one optimized `icon.svg` preserving animation, styling and accessibility for both
+  favicon and page use. Keep `--no-animation` as an explicit static option; retire `logo.svg`.
+- Run complete alignment searches and raster outputs in bounded batches, with a canvas
+  budget, serial fallback for large custom sizes, drained failures and owned native bytes.
+
+- Try lossless Sub filtering before final compression for bare PNGs with full palettes,
+  retaining the smaller preliminary encode. Both hosts share the change; 120/15 iterations
+  remain unchanged. Bump to 0.2.0 so integration caches cannot reuse previous output bytes.
+- Reduce browser image-engine initial shared memory from 250 to 64 MiB and cap spare worker
+  preload at four, preserving memory growth, fallback spawning and cleanup.
+- Rebuild the same Zopfli source with LLVM23 for the browser and CLI, retaining 120/15
+  compression iterations and exact output bytes. Include the binary hash in engine/cache
+  identity, ship licenses, and add reproducible build and performance scripts.
 - Validate WASM requirements inside the image worker as well as the page, so missing worker
   isolation fails clearly even when a browser still exposes shared memory.
 - Add CI browser parity and lifecycle checks for Firefox, WebKit and Chromium, with mobile

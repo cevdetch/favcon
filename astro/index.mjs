@@ -20,6 +20,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { build, engineVersions, FavseedError, linkTags } from '../bin/favseed.mjs';
+import { normaliseOptions } from '../lib/config.mjs';
 import { cacheKey, favseedVersion } from '../vite/cache.mjs';
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
@@ -94,13 +95,14 @@ export default function favseed(options = {}) {
   /** One build, cache-first. `mode` is 'full' or 'fast'. */
   const runBuild = async (mode, logger) => {
     const source = await readFile(state.inputPath);
-    // The dev artefacts are not the production bytes, by design: one size, zopfli at 15 iterations.
+    // Dev uses one size and, only when opted in, 15 Zopfli iterations.
     // base goes into the build, not only the links: the manifest's icon URLs carry it too,
     // and without it a site under /blog links /blog/site.webmanifest whose icons 404.
     const opts = mode === 'fast'
       ? { ...buildOptions, base: state.base, sizes: [256], mode: 'fast' }
       : { ...buildOptions, base: state.base };
 
+    normaliseOptions(opts); // Validate before cache lookup, including values that share a key.
     const key = cacheKey({ version: favseedVersion(), source, options: opts, engine: engineVersions() });
     const slot = join(state.cacheDir, key);
     const stampPath = join(state.cacheDir, 'written.json');

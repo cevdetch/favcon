@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer';
 import { builtinPlugins, optimize } from 'svgo/browser';
-import zopfli from '@gfx/zopfli';
+import { createZopfli } from '../../../lib/zopfli.mjs';
 import { createSvgStage } from '../../../lib/core.mjs';
 import { createEngine } from '../../../lib/engine.mjs';
 import { buildSet } from '../../../lib/pipeline.mjs';
@@ -11,6 +11,11 @@ import { checkCapabilities } from './capabilities.mjs';
 globalThis.Buffer ??= Buffer;
 const { optimiseSvg } = createSvgStage({ optimize, builtinPlugins });
 const cache = createBuildCache();
+const zopfli = createZopfli({ loadWasm: async () => {
+  const response = await fetch(new URL('../../../lib/zopfli.wasm', import.meta.url));
+  if (!response.ok) throw new Error(`Could not load compression engine: HTTP ${response.status}`);
+  return response.arrayBuffer();
+} });
 let loading;
 const load = () => {
   checkCapabilities();

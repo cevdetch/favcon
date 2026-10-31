@@ -17,7 +17,7 @@ describe('CSS comment scanning', () => {
       + '<style>/* before */.mark{fill:#123456}/* between */'
       + '@media(prefers-reduced-motion:no-preference){.mark{animation:pulse 1s}}/* after */'
       + '</style><path class="mark" d="M0 0h10v10H0z"/></svg>';
-    const icon = optimiseSvg(source).data;
+    const icon = optimiseSvg(source, { icon: true }).data;
     assert.match(icon, /fill="#123456"/);
     assert.doesNotMatch(icon, /<style/);
     const logo = optimiseSvg(source, { icon: false }).data;

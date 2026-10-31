@@ -1,7 +1,11 @@
 export const cases = [
+  { name: 'gradient/quality100', mark: 'gradient', options: { quality: 100 } },
+  { name: 'gradient/quality80', mark: 'gradient', options: { quality: 80 } },
+  { name: 'gradient/quality60-zopfli', mark: 'gradient', options: { quality: 60, zopfli: true, mode: 'fast', sizes: [32] } },
   ...['general', 'flat', 'second', 'mask', 'heavy', 'animated', 'tiles', 'wide', 'gradient', 'smil', 'dark']
     .map((mark) => ({ name: `${mark}/fast`, mark, options: { mode: 'fast' } })),
-  ...['tiles', 'gradient'].map((mark) => ({ name: `${mark}/release`, mark, options: { mode: 'release' } })),
+  ...['tiles', 'gradient'].map((mark) => ({ name: `${mark}/release`, mark, options: { mode: 'release', zopfli: true } })),
+  { name: 'general/zopfli-fast', mark: 'general', options: { mode: 'fast', zopfli: true } },
   { name: 'transparent-aliases', mark: 'general', options: { mode: 'fast', sizes: [32, 180, 32], bg: 'none', padding: 10, manifest: false } },
   { name: 'custom-manifest', mark: 'animated', options: { mode: 'fast', sizes: [180, 32], base: '/app/',
     manifest: { name: 'My app', theme_color: '#123456' }, vars: { hub: '#ee3344' }, animation: false, padding: 12 } },

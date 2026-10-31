@@ -13,6 +13,24 @@ import { createServer, build as viteBuild } from 'vite';
 import { build, buildFiles } from '../bin/favseed.mjs';
 import { declaresIcon, manifestIcons, manifestJson } from '../lib/core.mjs';
 import { cacheKey, favseedVersion, readSlot, writeSlot } from '../vite/cache.mjs';
+
+it('persistent cache normalizes default quality 80 and preserves explicit palette keys', () => {
+  const shared = { version: 'test', source: Buffer.from('<svg/>'), engine: {} };
+  const key = (options) => cacheKey({ ...shared, options });
+  assert.equal(key({}), key({ quality: 80 }));
+  assert.equal(key({ colors: 32 }), key({ colors: 32, quality: 100 }));
+  assert.equal(key({ colors: 256 }), key({ colors: 256, quality: 100 }));
+  assert.equal(key({ quality: 80 }), key({ quality: '80' }));
+  assert.notEqual(key({}), key({ quality: 100 }));
+});
+
+it('persistent cache distinguishes explicit Zopfli from the default', () => {
+  const shared = { version: 'test', source: Buffer.from('<svg/>'), engine: {} };
+  assert.notEqual(cacheKey({ ...shared, options: {} }), cacheKey({ ...shared, options: { zopfli: true } }));
+  assert.equal(cacheKey({ ...shared, options: {} }), cacheKey({ ...shared, options: { zopfli: false } }));
+  assert.equal(cacheKey({ ...shared, options: {} }), cacheKey({ ...shared, options: { mode: 'fast' } }),
+    'disabled compression should share a cache entry across effort modes');
+});
 import favseed, { favseedIcons } from '../vite/index.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -117,7 +135,7 @@ describe('favseed/vite in a build', () => {
   it('emits the set at the output root and links it in index.html', async () => {
     const root = app();
     await vbuild(root, [favseed(FAST)]);
-    for (const f of ['favicon.ico', 'icon.svg', 'logo.svg', 'apple-touch-icon.png', 'icon-32.png']) {
+    for (const f of ['favicon.ico', 'icon.svg', 'apple-touch-icon.png', 'icon-32.png']) {
       assert.ok(existsSync(join(root, 'dist', f)), f);
     }
     const html = readFileSync(join(root, 'dist', 'index.html'), 'utf8');

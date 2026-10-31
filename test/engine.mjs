@@ -6,10 +6,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
-import { crc32 } from 'node:zlib';
+import { crc32, inflateSync } from 'node:zlib';
+import referenceZopfli from '@gfx/zopfli';
 
 import { loadEngine, optimiseSvg } from '../bin/favseed.mjs';
-import { squareIconSvg } from '../lib/core.mjs';
+import { placeInSafeZone, squareIconSvg } from '../lib/core.mjs';
 import { createEngine, wrapForSize } from '../lib/engine.mjs';
 import { score } from './lib/accuracy.mjs';
 import { decode } from './lib/png.mjs';
@@ -29,6 +30,24 @@ const pixel = (img, x, y) => [...img.data.subarray((y * img.width + x) * 4, (y *
 const dec = (bytes) => decode(Buffer.from(bytes));
 
 describe('render', () => {
+  it('overlaps alignment probes while choosing the first crisp size in descending order', async () => {
+    let active = 0, peak = 0;
+    const requested = [];
+    const render = async (_svg, px) => {
+      requested.push(px); peak = Math.max(peak, ++active);
+      await new Promise((resolve) => setTimeout(resolve, px === 74 ? 8 : 1));
+      const rgba = new Uint8Array(px * px * 4);
+      rgba[((Math.floor(px / 2) * px) + (px === 100 ? 99 : Math.floor(px / 2))) * 4 + 3] = 255;
+      if (px !== 100 && px !== 74 && px !== 72) rgba[3] = 128;
+      active--;
+      return { width: px, height: px, rgba };
+    };
+    const fit = await placeInSafeZone('<svg viewBox="0 0 100 100"/>', render, 100);
+    assert.equal(fit.box, 74, 'a faster later probe must not win a tie');
+    assert.ok(peak > 1 && peak <= 4);
+    assert.equal(active, 0);
+    assert.ok(!requested.includes(68), 'a later batch ran after a crisp result');
+  });
   it('renders px x px, below and above the 1000 px floor', async () => {
     for (const px of [16, 32, 180, 512, 1024, 1500]) {
       const img = dec(await engine.render(icon('general'), px));
@@ -93,6 +112,39 @@ const fakeImage = (q, l, seen = {}) => ({
 });
 
 describe('encode', () => {
+  for (const synchronous of [false, true]) {
+    it(`drains the other candidate after a ${synchronous ? 'synchronous' : 'asynchronous'} encoder failure`, async () => {
+      const failure = new Error('quantizer failed');
+      let finish, started = false, settled = false;
+      const pending = new Promise((resolve) => { finish = resolve; });
+      const image = {
+        pngQuantize: () => { if (synchronous) throw failure; return Promise.reject(failure); },
+        losslessCompressPng: () => { started = true; return pending; },
+      };
+      const encoded = createEngine({ image }).encode(Uint8Array.of(0), { colors: 8 });
+      const rejected = assert.rejects(encoded, (error) => error === failure).then(() => { settled = true; });
+      await new Promise((resolve) => setImmediate(resolve));
+      try {
+        assert.ok(started, 'both candidates must be scheduled');
+        assert.equal(settled, false, 'returned while sibling was still active');
+      } finally {
+        finish(Uint8Array.of(1));
+        await rejected;
+      }
+    });
+  }
+  it('owns each candidate before a later native task reuses its memory', async () => {
+    const shared = Uint8Array.of(1, 2);
+    const image = {
+      pngQuantize: async () => shared,
+      losslessCompressPng: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        shared.fill(9);
+        return Uint8Array.of(3, 3, 3);
+      },
+    };
+    assert.deepEqual(await createEngine({ image }).encode(Uint8Array.of(0), { colors: 8 }), Uint8Array.of(1, 2));
+  });
   it('keeps the smaller encode, and the quantised one on a tie', async () => {
     const q = Uint8Array.of(1, 1, 1), smaller = Uint8Array.of(2, 2), same = Uint8Array.of(3, 3, 3);
     const enc = (a, b) => createEngine({ image: fakeImage(a, b) }).encode(Uint8Array.of(0), { colors: 8 });
@@ -106,6 +158,13 @@ describe('encode', () => {
     await createEngine({ image: fakeImage(Uint8Array.of(1), Uint8Array.of(1, 2), seen) })
       .encode(Uint8Array.of(0), { colors: 256 });
     assert.deepEqual(seen.quantize, { colors: 256, speed: 1, minQuality: 0, maxQuality: 100 });
+  });
+
+  it('uses the quality target without a fixed palette below 100', async () => {
+    const seen = {};
+    await createEngine({ image: fakeImage(Uint8Array.of(1), Uint8Array.of(1, 2), seen) })
+      .encode(Uint8Array.of(0), { colors: 256, quality: 80 });
+    assert.deepEqual(seen.quantize, { speed: 1, minQuality: 0, maxQuality: 80 });
   });
 
   it('returns a PNG of the same size as its input', async () => {
@@ -124,6 +183,19 @@ const chunksValid = (png) => {
 };
 
 describe('finish', () => {
+  it('reduces a full-palette gradient with the same pixels', async () => {
+    const { svg } = await placeInSafeZone(icon('gradient'), engine.renderRgba, 180, 'auto');
+    const encoded = await engine.encode(await engine.render(svg, 180, '#000000'), { colors: 256 });
+    // The old final-compression path: retain its rows and compress with the same upstream source.
+    const unchangedRows = createEngine({ image: { losslessCompressPng: async (png) => png },
+      zopfli: referenceZopfli, inflate: inflateSync });
+    const baseline = await unchangedRows.finish(encoded, { iterations: 15 });
+    const finished = await engine.finish(encoded, { iterations: 15 });
+    assert.ok(finished.length < baseline.length, `${finished.length} >= ${baseline.length}`);
+    assert.deepEqual(dec(finished), dec(encoded));
+    chunksValid(Buffer.from(finished));
+  });
+
   for (const name of ['general', 'gradient', 'tiles']) {
     it(`${name}: the same pixels in no more bytes, with valid chunks`, async () => {
       const enc = await engine.encode(await engine.render(icon(name), 128, '#000000'), { colors: 256 });

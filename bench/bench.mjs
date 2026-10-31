@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { build, engineVersions, icoWrap } from '../bin/favseed.mjs';
-import { DEFAULT_COLORS } from '../lib/core.mjs';
+import { DEFAULT_COLORS, squareIconSvg } from '../lib/core.mjs';
 import { reference, score } from '../test/lib/accuracy.mjs';
 import { decode } from '../test/lib/png.mjs';
 import { nativeVersions, run } from './native.mjs';
@@ -50,9 +50,11 @@ const rawRenders = async () => {
     // isolation rather than re-measuring svgo on every axis.
     const built = join(OUT, 'svg', m);
     await build({ input: join(FIXTURES, `${m}.svg`), out: built, sizes: [16], bg: null, zopfli: false });
+    const rasterSvg = join(built, 'raster-input.svg');
+    writeFileSync(rasterSvg, squareIconSvg(readFileSync(join(built, 'icon.svg'), 'utf8')).data);
     for (const px of [16, 32, 180, 192, 512]) {
       const f = join(dir, `${m}-${px}.png`);
-      await run('resvg', ['--quiet', '-w', String(px), '-h', String(px), join(built, 'icon.svg'), f]);
+      await run('resvg', ['--quiet', '-w', String(px), '-h', String(px), rasterSvg, f]);
       made.push({ mark: m, px, file: f });
     }
   }
@@ -112,7 +114,7 @@ sweeps.colors = async () => {
     ...out.map(([c, b, w, at]) =>
       `${num(c, 7)}${num(b, 9)}${num(((b / base - 1) * 100).toFixed(1) + '%', 9)}${num(w.toFixed(3) + '%', 11)}  ${at}${w <= 1 ? '' : '   OVER THE BAR'}`)].join('\n');
   return { title: 'Palette size: bytes against accuracy',
-           note: `${MARKS.length - 1} marks (gradient excluded), 180 + 192 + 512 px all placed, zopfli on. This is the sweep that sets the default.`,
+           note: `${MARKS.length - 1} marks (gradient excluded), 180 + 192 + 512 px all placed, default Zopfli disabled. This is the sweep that sets the default.`,
            text };
 };
 

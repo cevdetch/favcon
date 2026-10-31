@@ -22,8 +22,8 @@ node bench/bench.mjs colors    # one sweep only
 node bench/bench.mjs --write   # regenerate docs/BENCHMARKS.md
 ```
 
-A change that costs bytes to save build time is rejected by default. Smaller output beats
-faster build: the bytes ship to every visitor forever, the build happens once.
+A change that costs bytes to save build time needs explicit approval and measured tradeoffs.
+The current default skips Zopfli; `--zopfli` opts into its additional lossless compression.
 
 ## Measure before you believe it
 
@@ -54,14 +54,12 @@ resvg, pngquant and oxipng for its native reference arm.
 
 `test/run.mjs` automates every line.
 
-1. Produces `logo.svg`, `icon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`,
+1. Produces `icon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`,
    `icon-512.png`, and nothing else.
 2. Dimensions are exact: 180×180, 192×192, 512×512; the ICO reports a single 32×32 entry.
-3. `icon.svg`, in **every** mode (including a default build of an animated source), contains no
-   `role`, no `aria-*`, no `class`, no `style=`, no `<style>`, no `<defs`, no `var(`, no
-   `<desc>`, no `<title>`, and keeps `xmlns` and `viewBox`. One exception: a source with a
-   `prefers-color-scheme` block keeps that block in one `<style>`, with the classes it selects
-   (decision 25).
+3. `icon.svg` preserves animation, styling and accessibility by default, including referenced
+   classes/IDs, reduced-motion rules, `xmlns` and `viewBox`. Explicit `--no-animation` strips
+   motion and accessibility while retaining color-scheme styling when present.
 4. `--var name=value` overrides the fallback, and the old value is gone from the output.
 5. An unresolvable `var()` with no fallback fails with an error and a non-zero exit, and writes
    nothing.
@@ -81,12 +79,13 @@ resvg, pngquant and oxipng for its native reference arm.
     set intact, and leaves no staging directory behind.
 13. `--colors` outside 2–256, a missing input, a non-SVG input and an unknown flag all fail with a
     clear `favseed: …` message and **no stack trace**.
-14. Animation lands in `logo.svg` and nowhere else: it keeps its reduced-motion guard, has `var()`
-    resolved inside it, carries no `role`/`aria-*`, and every surviving class is a live selector.
-    `--no-animation` makes `logo.svg` equal `icon.svg`; a static source does the same. `icon.svg`
-    equals the same source with its animation deleted and is byte-identical in both modes, as is
-    every raster. A `var()` used only by an animation fails the `logo.svg` pass, naming
-    `--no-animation`, and never the `icon.svg` one.
+14. The single `icon.svg` retains motion and resolves its custom properties. Rasters use the
+    base appearance; explicit `--no-animation` yields the same raster bytes on the fixtures.
+    An unresolved motion variable fails the preserved SVG, naming `--no-animation`.
+    PNG quality defaults to 80; explicit colors without quality retain the quality-100 path.
+    Quality 100 restores the previous higher-fidelity bytes.
+    Reject quality outside integer 1–100 and explicit colors combined with quality below 100.
+
 15. Long options accept `--opt=value`; a flag that takes no argument rejects one.
 16. `--sizes 32` renders twice on purpose: once padded for `icon-32.png`, once unpadded for
     the ICO payload. Under `--bg none` the icon is unpadded too, and the two are the same
