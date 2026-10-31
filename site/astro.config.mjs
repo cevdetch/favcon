@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { isolationHeaders, productionHeaders } from './headers.mjs';
@@ -24,6 +25,10 @@ export default defineConfig({
     inlineStylesheets: 'always',
   },
   integrations: [
+    sitemap({
+      // Only the homepage is indexable; /check and error pages stay out.
+      filter: (page) => new URL(page).pathname === '/',
+    }),
     {
       name: 'favseed-host',
       hooks: {
