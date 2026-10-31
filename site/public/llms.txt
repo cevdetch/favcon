@@ -2,7 +2,7 @@
 
 > One SVG in, an optimised favicon set out. A Node CLI (`npx favseed logo.svg --out public`), an Astro integration (`favseed/astro`), and this website, which runs the same SVG stage in the browser with nothing uploaded.
 
-favseed writes one optimized `icon.svg` preserving animation and styling, a 32x32 PNG-backed `favicon.ico`, `apple-touch-icon.png`, and safe-zone-placed `icon-192.png`/`icon-512.png`, plus an optional `site.webmanifest`. PNGs use the smaller quantized/lossless candidate at quality 80 by default. Use --quality 100 for higher fidelity; explicit colors without quality retain that fixed-palette path. Zopfli is optional and disabled by default (`--zopfli` to enable it). Browser and CLI share the pinned engine and pipeline and produce identical bytes for matching source/options. Processing stays local.
+favseed writes one optimized `icon.svg` preserving animation and styling, a 32x32 PNG-backed `favicon.ico`, `apple-touch-icon.png`, and safe-zone-placed `icon-192.png`/`icon-512.png`, plus an optional `site.webmanifest`. Full builds select SVG precision against the source's static 512px appearance with a 1% error budget, retaining source geometry if rounded candidates fail. PNGs use the smaller quantized/lossless candidate at quality 80 by default. Use --quality 100 for higher fidelity; explicit colors without quality retain that fixed-palette path. Zopfli is optional and disabled by default (`--zopfli` to enable it). Browser and CLI share the pinned engine and pipeline and produce identical bytes for matching source/options. Processing stays local.
 
 ## Docs
 

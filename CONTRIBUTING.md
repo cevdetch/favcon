@@ -66,8 +66,10 @@ resvg, pngquant and oxipng for its native reference arm.
 6. A referenced id survives; unreferenced ids are dropped.
 7. `favicon.ico` starts `00 00 01 00`, its payload is a PNG (`89 50 4E 47`), and the container is
    byte-identical to `icotool -c -r` wherever icotool is available.
-8. Every emitted raster meets `pct <= 1.0 %`; the padded icons are scored against
-   **background-matched references, padded the same way**.
+8. Default-quality padded PNGs in the accuracy fixtures meet `pct <= 1.0 %`, scored against
+   **background-matched references, padded the same way**. ICO source error is reported separately:
+   the unchanged heavy ICO still reaches 1.660%. See the [current precision report](bench/precision/README.md).
+   The SVG's static 512px budget does not guarantee this threshold at every raster size or quality.
 9. `apple-touch-icon.png` has no alpha channel when `--bg` is set (the default).
 10. `--manifest` writes valid JSON: the size icons as `"any maskable"` when `--bg` is opaque
     and `"any"` alone when it is `none`, and never `icon.svg`; `--html` emits the `<link>` set with
@@ -83,7 +85,7 @@ resvg, pngquant and oxipng for its native reference arm.
     base appearance; explicit `--no-animation` yields the same raster bytes on the fixtures.
     An unresolved motion variable fails the preserved SVG, naming `--no-animation`.
     PNG quality defaults to 80; explicit colors without quality retain the quality-100 path.
-    Quality 100 restores the previous higher-fidelity bytes.
+    Quality 100 uses the higher-fidelity fixed-palette path; SVG accuracy selection remains active.
     Reject quality outside integer 1–100 and explicit colors combined with quality below 100.
 
 15. Long options accept `--opt=value`; a flag that takes no argument rejects one.
@@ -102,12 +104,16 @@ resvg, pngquant and oxipng for its native reference arm.
     and nowhere in an SSR build; links them in `index.html` unless the page already has a
     `<link rel="icon">`; serves them in dev at `base`; and never replaces a different file in
     `public/`.
+22. Full builds select the first precision in 1/2/3/4/6/8 whose static 512px render meets a
+    1% source-error budget on both black and white composites. Whole-mark disappearance fails.
+    If no candidate passes, preserve source geometry. This does not grade every animation frame,
+    media state or display size. Keep browser/CLI bytes identical and invalidate integration caches.
 
 ---
 
 ## Fixtures
 
-`test/fixtures/` is thirteen neutral SVGs authored for this repo. No brand content, ever.
+`test/fixtures/` contains neutral SVGs authored for this repo. No brand content, ever.
 Each one exists to exercise something specific; `test/run.mjs` names it. If you add a
 fixture, say in a comment what it is for; if it is generated, commit the generator and its
 output together (`heavy.gen.mjs` is the pattern).

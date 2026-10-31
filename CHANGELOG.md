@@ -11,8 +11,15 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Select SVG precision against the source's static 512px appearance with a 1% error budget.
+  Keep compact precision 1 for passing marks; retry higher precision and retain unrounded
+  source geometry if no candidate passes. Preserve animation/style/accessibility and use
+  the same selector in browser and CLI. Reuse accepted pixels in the bounded placement cache.
+  Correct gradient-stop rounding and small-viewBox geometry, and bump to 0.3.0 for cache identity.
+  Refresh the Vite PWA comparison for corrected inputs; the old 2.9%-smaller claim no longer applies.
+
 - Add PNG/ICO quality 1–100 across CLI, config/API, integrations and browser. Default 80
-  balances size and fidelity; explicit 100 restores the previous bytes. Custom colors without quality
+  balances size and fidelity; explicit 100 uses the higher-fidelity fixed-palette path. Custom colors without quality
   retain the fixed-palette path; explicit quality below 100 cannot combine with colors.
   Keep Zopfli independent and opt-in.
 
