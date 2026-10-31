@@ -1,6 +1,6 @@
 {
   "name": "favseed",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One SVG in, an optimised favicon set out.",
   "type": "module",
   "license": "MIT",
@@ -43,11 +43,10 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "test": "node --test test/run.mjs test/engine.mjs test/pipeline.mjs test/config.mjs test/vite.mjs test/security.mjs",
+    "test": "node --test test/run.mjs test/engine.mjs test/pipeline.mjs test/config.mjs test/vite.mjs test/security.mjs test/zopfli.mjs",
     "bench": "node bench/bench.mjs"
   },
   "dependencies": {
-    "@gfx/zopfli": "1.0.15",
     "@napi-rs/image": "1.15.0",
     "svgo": "^4.1.0"
   },
@@ -91,6 +90,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "@gfx/zopfli": "1.0.15",
     "@types/node": "^24.0.0",
     "vite": "8.3.3"
   }

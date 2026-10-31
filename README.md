@@ -6,20 +6,19 @@ One SVG in, an optimised favicon set out.
 npx favseed logo.svg --out public
 ```
 
-That is the whole quickstart. It writes six files, prints their sizes, and tells you if your
+That is the whole quickstart. It writes five files, prints their sizes, and tells you if your
 mark is animated.
 
 ```
-logo.svg                  202 B  static (no animation in the source)
-icon.svg                  202 B
-favicon.ico               462 B
-apple-touch-icon.png     1092 B  mark at 142px of 180 in the safe zone
-icon-192.png             1163 B  mark at 152px of 192 in the safe zone
-icon-512.png             2704 B  mark at 408px of 512 in the safe zone
+icon.svg                  (optimized, animation and styling preserved)
+favicon.ico               (32×32 PNG payload)
+apple-touch-icon.png      (180×180, safe-zone placement)
+icon-192.png               (192×192, safe-zone placement)
+icon-512.png               (512×512, safe-zone placement)
 ```
 
-(That is `test/fixtures/general.svg`, a two-colour mark, at the defaults. Your bytes depend on
-your mark; `node bench/bench.mjs` measures the whole corpus.)
+Sizes depend on your mark. Standard builds skip Zopfli; add `--zopfli` for extra lossless
+compression at the cost of generation time.
 
 No install at all: **[favseed.cevdet.ch](https://favseed.cevdet.ch)** runs the same engine and
 build pipeline in your browser, with nothing uploaded. Matching input, options, and build mode
@@ -40,29 +39,34 @@ Add the links to your `<head>`. `favseed --html` prints them:
 `npx favseed logo.svg --out public` needs Node 24 or newer and nothing else. The image engine,
 [`@napi-rs/image`](https://www.npmjs.com/package/@napi-rs/image), installs with the package:
 resvg, oxipng and a quantiser in one native module, prebuilt for Linux, macOS and Windows on
-x64 and arm64, and FreeBSD on x64. [`@gfx/zopfli`](https://www.npmjs.com/package/@gfx/zopfli),
-the zopfli pass, is WASM and runs anywhere Node does.
+x64 and arm64, and FreeBSD on x64. The bundled Zopfli WASM uses the same Google source as
+`@gfx/zopfli` 1.0.15, rebuilt with modern LLVM for both the CLI and browser. Its source,
+toolchain checksums and build recipe are in
+[bench/zopfli](https://github.com/cevdetch/favseed/blob/main/bench/zopfli/README.md).
+Opt-in final compression also tries a guarded lossless palette pass; the
+[Vite PWA comparison](https://github.com/cevdetch/favseed/blob/main/bench/zopfli/COMPETITOR.md)
+records its byte savings and the speed, size and accuracy tradeoffs.
 
 ## What you get
 
 | File | What it is |
 |---|---|
-| `logo.svg` | The mark itself. Optimised, **animation intact**. For pages and READMEs. |
-| `icon.svg` | The same optimisation **plus a structural animation strip**. This is the browser favicon *and* the file every raster below is rendered from. |
+| `icon.svg` | One optimized SVG for the favicon and page images. Animation, styling and accessibility are preserved by default. |
 | `favicon.ico` | One 32×32 entry, stored as a raw PNG in a 22-byte container. |
 | `apple-touch-icon.png` | 180×180 (60pt @3x; no iPhone renders above @3x) on the `--bg` ground, the mark placed in the safe zone so iOS's rounded mask cuts nothing. |
 | `icon-<size>.png` | On the `--bg` ground, the mark placed in the safe zone the same way (`--padding`, default `auto`). Default 192 and 512, the pair Chrome's install criteria document. The manifest's `any maskable` icons. |
 | `site.webmanifest` | Only with `--manifest`. Icons only: you merge your own `name` and `theme_color`. |
 
-Two SVGs, because they are not the same file. `icon.svg` is what a `<link rel="icon">` points
-at, and a favicon carrying `<style>`, `@keyframes` and classes is bytes no rasteriser and no
-ICO can use. `logo.svg` is the mark, animation and all, for the places that can show it.
+Use the same `/icon.svg` URL in `<link rel="icon">` and `<img>` so cacheable responses can be
+reused. PNG and ICO exports use the source's static base appearance. `--no-animation` is an
+explicit option for a static SVG.
 
 ## Why not one of the others
 
 There are several favicon generators on npm. Most write whatever sharp's encoder produced; the
-two that quantise do it through sharp's libimagequant and stop there. None of them compares
-candidate encodings or recompresses with zopfli, which is the whole point of this one.
+quantizing generators commonly use Sharp. Favseed measures safe-zone placement, compares
+quantized and lossless PNGs, caches integration output, and offers optional Zopfli compression
+through the same browser and CLI engine.
 
 | | weekly | dependencies |
 |---|---|---|
@@ -77,21 +81,20 @@ files for platforms that stopped existing), and its PNGs are whatever sharp's en
 sharp's `quality: 60` and `favgen` at `colors: 64`: one quantised encode, no comparison, no
 zopfli.
 
-favseed does fewer files and more work on each: quantise, compare the quantised and the
-lossless encode, and recompress the winner with zopfli. The test suite holds the default output to a
-pixel-accuracy bar (no more than 1 % of pixels off by a visible amount) rather than taking it
-on trust ([docs/BENCHMARKS.md](docs/BENCHMARKS.md) has the numbers). It also does the thing
-none of them do: it keeps your animation in one file and guarantees it is *absent* from the
-other.
+Favseed generates a small set with measured safe-zone placement and compares quantized and
+lossless PNG candidates. Extra Zopfli compression is opt-in. Its browser and CLI share the
+same engine, options and output bytes. The tests measure source accuracy; existing gradient
+and low-palette exceptions are documented in the benchmark reports.
 
-If you want thirty files for thirty platforms, use `favicons`. If you want six files that are
-as small as they can be, this one.
+In our four-logo benchmark with matching raster inputs, the default quality-80 set used **2.9%
+fewer PNG/ICO bytes than Vite PWA assets-generator 2.0.0’s default**, with lower measured pixel error.
+See [the measurements and method](https://github.com/cevdetch/favseed/blob/main/bench/zopfli/QUALITY.md); results depend on the input.
 
 ## Flags
 
 ```
 -o, --out DIR     Output directory (default: current)
-    --colors N    Palette size, 2-256 (default: 256, a ceiling, not a target)
+    --colors N    Explicit palette ceiling, 2-256; selects quality 100 when given alone
     --sizes LIST  Padded "any maskable" PNG sizes (default: "192 512")
     --bg COLOR    Ground of the padded icons (default: #000000). "none" keeps the set
                   transparent and unpadded, declared "any" only.
@@ -99,7 +102,10 @@ as small as they can be, this one.
                   `auto` measures the mark's own extent and snaps it to whole pixels;
                   give a number to override it.
     --var N=V     Set a CSS custom property, e.g. --var brand=#0E7C68. Repeatable.
-    --no-animation  Build logo.svg static too, so it equals icon.svg.
+    --no-animation  Explicitly remove motion from icon.svg.
+    --quality N     PNG quality target, 1-100 (default: 80). Use 100 with --colors.
+    --zopfli        Extra lossless PNG compression; slower, off by default.
+    --no-zopfli     Override a config that enables Zopfli.
     --manifest    Also write site.webmanifest.
     --html        Print the <link> tags.
 -q, --quiet   -V, --version   -h, --help
@@ -130,9 +136,8 @@ export default defineConfig({
 
 `base` prefixes every `href` that `--html` prints and every icon `src` in the manifest.
 `manifest` as an object writes `site.webmanifest` with those members ahead of the icons.
-`mode: 'fast'` runs zopfli at 15 iterations instead of 120: `general.svg` at the defaults builds
-in 9.4 s against 27.7 s, and the bytes are not the release ones. The summary's last line says
-which mode ran.
+With `zopfli: true`, `mode: 'fast'` uses 15 iterations instead of 120. The summary reports
+whether extra compression ran. Without opt-in, both modes use standard PNG output.
 
 A `.ts` config loads through Node's type stripping, which erases annotations and transforms
 nothing: an `enum` or a `namespace` fails with a message pointing at `favseed.config.mjs`.
@@ -228,29 +233,43 @@ skips `@media`, and they are the same bytes a source without the block would pro
 
 ## Animation
 
-Animation lands in `logo.svg` and nowhere else. Feed favseed an animated mark and you get a
-`logo.svg` that still moves, an `icon.svg` with the motion removed by a structural strip, and
-rasters rendered from the second one. That makes "the rasters are the rest frame" a property
-of the pipeline rather than a hope about resvg's CSS support.
+The single `icon.svg` preserves CSS/SMIL animation, referenced classes and IDs, and reduced-motion
+and color-scheme styles. It can be used as both the favicon and a page image; animation support
+depends on the browser and embedding context.
 
-For that to work, the mark has to follow four rules:
+PNG and ICO exports are still images. Their source must have a useful static base appearance;
+the renderer does not sample an animation timeline. Put optional motion inside a
+`prefers-reduced-motion: no-preference` media query when appropriate.
 
-- **The geometry as drawn is the rest frame.** Nothing is positioned by a keyframe, so resvg,
-  `--no-animation` and a reduced-motion viewer all see the same mark.
-- **Motion lives inside `@media (prefers-reduced-motion: no-preference)`.** Everything inside
-  such a block is treated as motion and removed wholesale.
-- **Iterations are `var(--loop, infinite)`.** Every keyframe set ends on the rest frame, so
-  `--var loop=1` plays once and stops on the static mark.
-- **Each palette class is used once per file**, so it can be inlined. Where several shapes
-  share a colour, put the class on a wrapper `<g>`.
+`--no-animation` (or `animation: false`) explicitly removes motion while retaining other
+static declarations. CSS variable overrides such as `--var brand=#7C0E68` still apply.
 
-The strip is structural, not a regex: SMIL elements, `@keyframes`, any `@media` mentioning
-`prefers-reduced-motion`, and `animation-`/`transition-` declarations wherever they are,
-including inside `style=""`. A non-motion declaration sharing a `style` attribute with a
-motion one survives.
+## PNG quality
 
-`--no-animation` builds `logo.svg` static too. A source with no animation gets `logo.svg` as a
-byte copy of `icon.svg`.
+`favseed logo.svg --quality 80 --out public` trades some PNG/ICO accuracy for smaller files.
+The same `quality: 80` option works in config/API, Vite and Astro; the browser has a numeric control.
+Default `80` balances file size and fidelity. Set `--quality 100` to restore the previous
+higher-fidelity output. An explicit `colors` option without quality selects the fixed-palette
+quality-100 path for compatibility. Explicit quality below 100 cannot combine with `colors`. The browser disables that
+field and restores its value when returning to 100.
+
+Quality is the native encoder's target, not an error percentage or Sharp's quality scale. Lower
+values do not always make smaller files. SVG optimization and safe-zone placement stay unchanged.
+Zopfli is independent: add `--zopfli` for extra lossless compression at any quality.
+See [quality measurements](https://github.com/cevdetch/favseed/blob/main/bench/zopfli/QUALITY.md) for size, accuracy and Vite PWA comparisons.
+
+## Compression
+
+Standard builds compare the quantized and lossless PNG candidates and stop there. `--zopfli`
+(or `zopfli: true` in config/API options) opts into additional lossless compression. With it,
+`mode: 'release'` uses 120 iterations and `mode: 'fast'` uses 15. Mode does not change bytes
+when Zopfli is disabled. The browser exposes the same opt-in.
+
+Output jobs and complete alignment searches run in bounded batches. Large custom output sizes
+retain serial scheduling; failures drain active work before returning. Both hosts use the
+same placement and encoding rules.
+Measured speed, byte tradeoffs and the current Vite PWA comparison are recorded in
+[the default-performance report](https://github.com/cevdetch/favseed/blob/main/bench/zopfli/DEFAULTS.md).
 
 ## Vite
 
@@ -266,7 +285,7 @@ export default defineConfig({
 
 **`vite dev`** builds the icons the first time a page asks for one, then serves them from
 memory. Edit the logo or `favseed.config.*` and the icons rebuild and the page reloads. Dev
-builds use fast mode, so their bytes differ from a release build.
+builds use fast effort only when Zopfli is enabled; otherwise their bytes match the build.
 
 **`vite build`** writes the release icons to the output directory, next to `index.html`.
 favseed never writes to `public/`.
@@ -340,14 +359,14 @@ favseed({
 
 **It does not rebuild on every dev-server restart.** The cache is content-addressed, not a
 heuristic: keyed on favseed's version, the input bytes, the canonicalised options **and the
-versions of `@napi-rs/image` and `@gfx/zopfli`**. That last part is what makes it correct:
+versions of `@napi-rs/image` and Zopfli (including the WASM build hash)**. That last part is what makes it correct:
 both change their output across releases, so a cache keyed only on the SVG would hand back
 stale files after an upgrade, with no sign of it. A hit hardlinks into `public/` in
 single-digit milliseconds.
 
-For a cold first run, `dev: 'fast'` (the default) builds one 256 px size with zopfli at 15
-iterations instead of 120: 1.6 s against 5.3 s for the same set in release mode. Dev artefacts
-are not the production bytes, by design.
+For a cold first run, `dev: 'fast'` (the default) builds one 256 px size. With Zopfli opted in,
+it uses 15 iterations; otherwise it skips extra compression. `dev: 'full'` generates the
+production set.
 
 **Head tags.** Astro has no official head-injection hook. All four `injectScript` stages are
 JavaScript, and a `<link rel="icon">` written by a script is found after the browser has
@@ -363,8 +382,8 @@ content: delete or move the file, and favseed writes its own.
 ## How it decides
 
 Every step was chosen by measurement. The reasoning is in
-**[docs/DECISIONS.md](docs/DECISIONS.md)**, and the current numbers (regenerated by
-`node bench/bench.mjs --write`) are in **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**.
+**[docs/DECISIONS.md](https://github.com/cevdetch/favseed/blob/main/docs/DECISIONS.md)**, and the current numbers (regenerated by
+`node bench/bench.mjs --write`) are in **[docs/BENCHMARKS.md](https://github.com/cevdetch/favseed/blob/main/docs/BENCHMARKS.md)**.
 
 The short version, because these are the parts that look wrong until you know why:
 
@@ -379,11 +398,11 @@ The short version, because these are the parts that look wrong until you know wh
   optimised after packing. favseed writes that header itself, byte-identical to
   `icotool -c -r`, which removes the only dependency with no npm package and no Windows build.
   The BMP payload `icotool` writes by default is 8.8× larger on the fixtures.
-- **Zopfli runs once**, on the file that already won the lossy/lossless comparison. Running it
+- **Opt-in Zopfli runs once**, on the file that already won the lossy/lossless comparison. Running it
   on both sides costs three times as much for identical bytes.
-- **The rasters are built one at a time on purpose.** zopfli runs on one thread, so a worker
-  per size looked obvious. It saved 13.5 %, because the 512 px icon alone takes as long as the
-  whole parallel build, and no core count gets past that (decision 27).
+- **Bounded concurrency overlaps raster jobs and complete alignment searches.** The shared
+  scheduler limits active canvas work, keeps large custom sizes serial, and drains failures
+  before a retry. Candidate selection and output order remain deterministic.
 
 ## Contributing and help
 
@@ -402,5 +421,5 @@ Created and maintained by [Cevdet](https://cevdet.ch/)
 ## Licence
 
 MIT. favseed spawns nothing. `@napi-rs/image` is MIT (its quantiser has been clean-room MIT
-code since 1.13.0), the resvg inside it is `Apache-2.0 OR MIT`, and `@gfx/zopfli` is
-Apache-2.0. The dependency tree holds no GPL code.
+code since 1.13.0), the resvg inside it is `Apache-2.0 OR MIT`, and the bundled Google Zopfli
+is Apache-2.0. Zopfli and WASI libc notices ship under `lib/`. The dependency tree holds no GPL code.

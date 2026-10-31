@@ -72,7 +72,7 @@ describe('the output set', () => {
   it('produces exactly the promised files and nothing else', async () => {
     const { out } = await DEFAULT_BUILD();
     assert.deepEqual(readdirSync(out).sort(),
-      ['apple-touch-icon.png', 'favicon.ico', 'icon-192.png', 'icon-512.png', 'icon.svg', 'logo.svg']);
+      ['apple-touch-icon.png', 'favicon.ico', 'icon-192.png', 'icon-512.png', 'icon.svg']);
   });
 
   it('renders every size exactly', async () => {
@@ -114,7 +114,7 @@ describe('the output set', () => {
 
 // ------------------------------------------------------------------- 3, 6 --
 
-describe('icon.svg is the conservative favicon', () => {
+describe('explicit static SVG optimization', () => {
   const forbidden = [
     [/\srole=/, 'role'], [/\saria-/, 'aria-*'], [/\sclass=/, 'class'], [/\sstyle=/, 'style='],
     [/<style/, '<style>'], [/<defs/, '<defs'], [/var\(/, 'var('],
@@ -128,7 +128,7 @@ describe('icon.svg is the conservative favicon', () => {
   ]) {
     const label = `${name}${extra.animation === false ? ' --no-animation' : ''}`;
     it(`strips everything unrenderable from ${label}`, async () => {
-      const { out } = await SMALL(name, extra);
+      const { out } = await SMALL(name, { ...extra, animation: false });
       const svg = readFileSync(join(out, 'icon.svg'), 'utf8');
       for (const [re, what] of forbidden) assert.ok(!re.test(svg), `${label}: icon.svg still has ${what}\n${svg}`);
       assert.match(svg, /xmlns=/);
@@ -434,7 +434,7 @@ describe('the masked icons', () => {
   it('are a 180px apple-touch-icon and padded size icons, all opaque', async () => {
     const { out } = await MASKED('general');
     assert.deepEqual(readdirSync(out).sort(),
-      ['apple-touch-icon.png', 'favicon.ico', 'icon-32.png', 'icon-512.png', 'icon.svg', 'logo.svg']);
+      ['apple-touch-icon.png', 'favicon.ico', 'icon-32.png', 'icon-512.png', 'icon.svg']);
     for (const [file, px] of ICONS) {
       const buf = readFileSync(join(out, file));
       assert.equal(header(buf).width, px, `${file} width`);
@@ -507,7 +507,7 @@ describe('the masked icons', () => {
     const out = freshDir();
     await build({ input: fixture('general.svg'), out, sizes: [192, 512], zopfli: false });
     assert.deepEqual(readdirSync(out).sort(),
-      ['apple-touch-icon.png', 'favicon.ico', 'icon-192.png', 'icon-512.png', 'icon.svg', 'logo.svg']);
+      ['apple-touch-icon.png', 'favicon.ico', 'icon-192.png', 'icon-512.png', 'icon.svg']);
   });
 
   it('declares the padded icons "any maskable", and "any" alone when transparent', async () => {
@@ -692,14 +692,14 @@ describe('bad input fails clearly', () => {
 
 // ---------------------------------------------------------------------- 14 --
 
-describe('animation lands in logo.svg and nowhere else', () => {
+describe('the single SVG preserves animation', () => {
   it('keeps the guard, resolves var() inside it, and every class is live', async () => {
     const { out } = await SMALL('animated');
-    const logo = readFileSync(join(out, 'logo.svg'), 'utf8');
+    const logo = readFileSync(join(out, 'icon.svg'), 'utf8');
     assert.match(logo, /@media[^{]*prefers-reduced-motion/, 'the reduced-motion guard is gone');
     assert.match(logo, /animation:/, 'the animation declaration is gone');
     assert.ok(!logo.includes('var('), 'an unresolved var() reached logo.svg');
-    assert.ok(!/\srole=/.test(logo) && !/\saria-/.test(logo), 'role/aria survived in logo.svg');
+    assert.match(logo, /aria-label="Animated fixture"/, 'page-image accessibility was removed');
 
     const selectors = new Set([...logo.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map((m) => m[1]));
     for (const m of logo.matchAll(/class="([^"]*)"/g)) {
@@ -737,7 +737,7 @@ describe('animation lands in logo.svg and nowhere else', () => {
   it('--var reaches inside the animation', async () => {
     const out = freshDir();
     await build({ input: fixture('animated.svg'), out, sizes: [32], vars: { loop: '1' } });
-    const logo = readFileSync(join(out, 'logo.svg'), 'utf8');
+    const logo = readFileSync(join(out, 'icon.svg'), 'utf8');
     assert.match(logo, /animation:[^}]*\b1\b/, 'the loop count was not overridden');
     assert.ok(!logo.includes('infinite'), 'the fallback survived the override');
   });
@@ -748,34 +748,36 @@ describe('animation lands in logo.svg and nowhere else', () => {
     assert.equal((await SMALL('general')).animated, false);
   });
 
-  it('--no-animation makes logo.svg equal icon.svg', async () => {
+  it('--no-animation explicitly removes motion from the single SVG', async () => {
     const { out } = await SMALL('animated', { animation: false });
-    assert.equal(readFileSync(join(out, 'logo.svg'), 'utf8'), readFileSync(join(out, 'icon.svg'), 'utf8'));
+    assert.ok(!/@keyframes|<animate|animation:/.test(readFileSync(join(out, 'icon.svg'), 'utf8')));
+    assert.ok(!existsSync(join(out, 'logo.svg')));
   });
 
-  it('a static source gets logo.svg as a copy of icon.svg', async () => {
+  it('a static source emits a single non-animated SVG', async () => {
     const { out } = await SMALL('general');
-    assert.equal(readFileSync(join(out, 'logo.svg'), 'utf8'), readFileSync(join(out, 'icon.svg'), 'utf8'));
+    assert.ok(!/@keyframes|<animate|animation:/.test(readFileSync(join(out, 'icon.svg'), 'utf8')));
+    assert.ok(!existsSync(join(out, 'logo.svg')));
   });
 
-  it('icon.svg and every raster are byte-identical in both modes', async () => {
+  it('every raster uses the same base appearance with motion preserved or removed', async () => {
     const a = await SMALL('animated');
     const b = await SMALL('animated', { animation: false });
-    for (const f of ['icon.svg', 'icon-32.png', 'apple-touch-icon.png', 'favicon.ico']) {
+    for (const f of ['icon-32.png', 'apple-touch-icon.png', 'favicon.ico']) {
       assert.deepEqual([...readFileSync(join(a.out, f))], [...readFileSync(join(b.out, f))],
         `${f} differs between the default and --no-animation builds`);
     }
   });
 
   it('keeps a non-motion declaration that shares a style attribute with a motion one', async () => {
-    const { out } = await SMALL('smil');
+    const { out } = await SMALL('smil', { animation: false });
     const icon = readFileSync(join(out, 'icon.svg'), 'utf8');
     assert.ok(!icon.includes('animation'), 'the animation declaration survived');
     assert.ok(!icon.includes('<animate'), 'a SMIL element survived');
     assert.match(icon, /opacity=".9"|opacity=".90*"/, 'the non-motion opacity was thrown away with it');
   });
 
-  it('a var() used only by the animation fails the logo pass, naming --no-animation', async () => {
+  it('an unresolved motion variable fails the preserved SVG, naming --no-animation', async () => {
     const out = freshDir();
     const r = await cli(['--bg', '#fff', '--sizes', '32', '-o', out, fixture('animvar.svg')]);
     assert.equal(r.code, 1);
@@ -788,7 +790,8 @@ describe('animation lands in logo.svg and nowhere else', () => {
     const out = freshDir();
     const r = await cli(['--bg', '#fff', '--sizes', '32', '--no-animation', '-o', out, fixture('animvar.svg')]);
     assert.equal(r.code, 0, r.stderr);
-    assert.equal(readFileSync(join(out, 'logo.svg'), 'utf8'), readFileSync(join(out, 'icon.svg'), 'utf8'));
+    assert.ok(!/@keyframes|<animate|animation:/.test(readFileSync(join(out, 'icon.svg'), 'utf8')));
+    assert.ok(!existsSync(join(out, 'logo.svg')));
   });
 });
 
@@ -835,7 +838,7 @@ describe('rendering', () => {
     assert.equal(h.width, 32);
     assert.equal(h.height, 32);
     // logo.svg is the mark, not an icon: it keeps the proportions it was drawn with.
-    assert.ok(!readFileSync(join(out, 'logo.svg'), 'utf8').includes('preserveAspectRatio'));
+    assert.ok(!readFileSync(join(out, 'icon.svg'), 'utf8').includes('preserveAspectRatio'));
   });
 
   it('warns when --bg is not given', async () => {
@@ -863,7 +866,7 @@ describe('the published tarball', () => {
     // ERR_MODULE_NOT_FOUND on first run. This assertion is the only thing standing between
     // the split and a broken publish.
     assert.ok(files.includes('lib/core.mjs'), 'lib/core.mjs is missing - the package cannot run');
-    for (const need of ['astro/index.mjs', 'astro/Head.astro', 'vite/index.mjs', 'vite/cache.mjs', 'vite/index.d.mts', 'package.json', 'README.md', 'LICENSE', 'CHANGELOG.md']) {
+    for (const need of ['lib/zopfli.mjs', 'lib/zopfli-build.mjs', 'lib/zopfli.wasm', 'lib/ZOPFLI-LICENSE', 'lib/WASI-LICENSE', 'astro/index.mjs', 'astro/Head.astro', 'vite/index.mjs', 'vite/cache.mjs', 'vite/index.d.mts', 'package.json', 'README.md', 'LICENSE', 'CHANGELOG.md']) {
       assert.ok(files.includes(need), `${need} is missing from the tarball`);
     }
     for (const f of files) {
@@ -938,10 +941,24 @@ describe('the svg stage on its own', () => {
     assert.match(icon.data, /opacity=/);
   });
 
-  it('drops role and aria-* from both passes', () => {
+  for (const style of ['', '<style>.mark{animation:pulse 1s}@keyframes pulse{to{opacity:.5}}</style>']) {
+    it(`preserves accessibility ID references ${style ? 'with' : 'without'} a stylesheet`, () => {
+      const source = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" '
+        + 'aria-labelledby="label other" aria-describedby="description">'
+        + '<title id="label">Company mark</title><desc id="description">Description</desc>'
+        + style + '<path id="other" class="mark" d="M0 0h10v10H0z"/></svg>';
+      const out = optimiseSvg(source).data;
+      for (const id of ['label', 'other', 'description']) assert.ok(out.includes(`id="${id}"`), out);
+      assert.match(out, /aria-labelledby="label other"/);
+      assert.match(out, /aria-describedby="description"/);
+    });
+  }
+
+  it('preserves accessibility in the reusable SVG and strips it only on explicit static optimization', () => {
     for (const icon of [true, false]) {
       const out = optimiseSvg(read('animated'), { icon }).data;
-      assert.ok(!/\srole=/.test(out) && !/\saria-/.test(out), `icon=${icon}`);
+      assert.equal(/\srole=/.test(out), !icon, `icon=${icon}`);
+      assert.equal(/\saria-/.test(out), !icon, `icon=${icon}`);
     }
   });
 
@@ -1097,7 +1114,7 @@ describe('the astro integration', () => {
 
       const pub = join(root, 'public');
       assert.deepEqual(readdirSync(pub).sort(),
-        ['apple-touch-icon.png', 'favicon.ico', 'icon-32.png', 'icon.svg', 'logo.svg']);
+        ['apple-touch-icon.png', 'favicon.ico', 'icon-32.png', 'icon.svg']);
 
       const before = readFileSync(join(pub, 'favicon.ico'));
       s.calls.logs.length = 0;
@@ -1105,6 +1122,19 @@ describe('the astro integration', () => {
       assert.ok(s.calls.logs.some(([, m]) => m.startsWith('cache hit')), 'the second run rebuilt');
       assert.deepEqual([...readFileSync(join(pub, 'favicon.ico'))], [...before]);
     });
+
+  it('rejects invalid options even when their raw key matches a populated cache', async () => {
+    const root = freshDir(), s = stub(root);
+    mkdirSync(root, { recursive: true });
+    copyFileSync(fixture('flat.svg'), join(root, 'logo.svg'));
+    for (const zopfli of [false, null]) {
+      const integration = favseedAstro({ input: 'logo.svg', sizes: [32], zopfli });
+      await integration.hooks['astro:config:setup']({ command: 'build', ...s.args });
+      const result = integration.hooks['astro:build:start']({ logger: s.args.logger });
+      if (zopfli === false) await result;
+      else await assert.rejects(result, /zopfli must be true or false/);
+    }
+  });
 
   it('puts config.base into the manifest\'s icon URLs, not only the links', async () => {
     // The page linked /blog/site.webmanifest while the icons inside it pointed at /icon-32.png,

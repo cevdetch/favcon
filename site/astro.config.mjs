@@ -3,7 +3,7 @@ import sitemap from '@astrojs/sitemap';
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { isolationHeaders, productionHeaders } from './headers.mjs';
-import { zopfliBrowser } from './build/zopfli-browser.mjs';
+import { wasiRuntime } from './build/wasi-runtime.mjs';
 
 // A static site on Cloudflare Pages, built from main by the Pages dashboard: no adapter, no
 // deploy workflow. Everything that touches an SVG runs in the visitor's tab: there is no
@@ -40,14 +40,14 @@ export default defineConfig({
     },
   ],
   vite: {
-    plugins: [zopfliBrowser()],
+    plugins: [wasiRuntime()],
     // lib/core.mjs lives above this directory: the site shares favseed's isomorphic half by
     // importing the file, not by copying it. Vite refuses to serve outside the project root in
     // dev unless told, and this is the one exception.
     server: { headers: isolationHeaders, fs: { allow: [fileURLToPath(new URL('..', import.meta.url))] } },
     preview: { headers: isolationHeaders },
     build: { target: 'esnext' },
-    worker: { format: 'es', plugins: () => [zopfliBrowser()] },
-    optimizeDeps: { exclude: ['@napi-rs/image-wasm32-wasi'], rolldownOptions: { plugins: [zopfliBrowser()] } },
+    worker: { format: 'es', plugins: () => [wasiRuntime()] },
+    optimizeDeps: { exclude: ['@napi-rs/image-wasm32-wasi'] },
   },
 });

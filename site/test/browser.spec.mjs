@@ -12,6 +12,11 @@ const summary = ({ files, fit, links, animated }) => ({
   files: files.map(({ name, bytes }) => ({ name, hash: hash(bytes), size: bytes.length })),
   fit, links, animated,
 });
+const downloads = (page) => page.locator('#files a').evaluateAll(async (links) => Promise.all(links.map(async (link) => {
+  const bytes = await (await fetch(link.href)).arrayBuffer();
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return { name: link.download, size: bytes.byteLength, hash: Array.from(digest, (n) => n.toString(16).padStart(2, '0')).join('') };
+})));
 const checkPage = async (page) => {
   const response = await page.goto('/check');
   for (const [name, value] of Object.entries(isolationHeaders)) expect(await response.headerValue(name)).toBe(value);
@@ -24,7 +29,7 @@ test('files and metadata match the CLI; archives, cache and page timers work', a
   page.on('pageerror', (error) => errors.push(error.message));
   await checkPage(page);
   const selected = isMobile ? cases.filter((item) =>
-    ['gradient/fast', 'tiles/release', 'transparent-aliases', 'custom-manifest'].includes(item.name)) : cases;
+    ['gradient/fast', 'tiles/release', 'gradient/quality60-zopfli', 'transparent-aliases', 'custom-manifest'].includes(item.name)) : cases;
   let fileCount = 0;
   for (const item of selected) {
     await test.step(item.name, async () => {
@@ -58,6 +63,29 @@ test('invalid options, cancellation and worker retry leave the engine usable', a
   expect(actual.files).toEqual(summary(await buildFiles({ input: fixture('general'), manifest: true, ...options })).files);
 });
 
+test('a 1024px raster matches native after shared memory grows', async ({ page }) => {
+  let worker;
+  page.on('worker', (value) => { if (value.url().includes('engine-worker-')) worker = value; });
+  await page.route('**/engine-worker-*.js', async (route) => {
+    const response = await route.fetch();
+    const observe = `const memories = []; const OriginalMemory = WebAssembly.Memory;
+      WebAssembly.Memory = new Proxy(OriginalMemory, { construct(Target, [descriptor]) {
+        const memory = new Target(descriptor);
+        if (descriptor.shared) memories.push({memory, initial: descriptor.initial * 65536});
+        return memory;
+      } });
+      globalThis.favseedMemoryGrew = () => memories.some(({memory, initial}) => memory.buffer.byteLength > initial);\n`;
+    await route.fulfill({ response, body: observe + await response.text() });
+  });
+  await checkPage(page);
+  const input = fixture('general'), source = await readFile(input, 'utf8');
+  const options = { mode: 'fast', sizes: [1024], padding: 0, bg: 'none' };
+  const actual = await page.evaluate(({ source, options }) => window.favseedCheck.build(source, options), { source, options });
+  expect({ files: actual.files, fit: actual.fit, links: actual.links, animated: actual.animated })
+    .toEqual(summary(await buildFiles({ input, manifest: true, ...options })));
+  expect(await worker.evaluate(() => globalThis.favseedMemoryGrew())).toBe(true);
+});
+
 test('form downloads match native and survive failed and cancelled builds', async ({ page, isMobile }) => {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -75,11 +103,7 @@ test('form downloads match native and survive failed and cancelled builds', asyn
   await expect(page.locator('output')).toHaveClass('good', { timeout: 90_000 });
   await expect(page.locator('#result')).toBeVisible();
   const expected = summary(await buildFiles({ input: fixture('tiles'), mode: 'fast', manifest: true }));
-  const actual = await page.locator('#files a').evaluateAll(async (links) => Promise.all(links.map(async (link) => {
-    const bytes = await (await fetch(link.href)).arrayBuffer();
-    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-    return { name: link.download, size: bytes.byteLength, hash: Array.from(digest, (n) => n.toString(16).padStart(2, '0')).join('') };
-  })));
+  const actual = await downloads(page);
   expect(actual).toEqual(expected.files);
   const downloadEvent = page.waitForEvent('download');
   if (isMobile) await page.locator('#zip').tap(); else await page.locator('#zip').click();
@@ -95,6 +119,7 @@ test('form downloads match native and survive failed and cancelled builds', asyn
   await expect(page.locator('#zip')).toHaveAttribute('href', url);
   await page.locator('input[name=bg]').fill('#000000');
   await page.locator('input[name=padding]').fill('20');
+  await page.locator('input[name=zopfli]').check();
   await generate.click();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.locator('output')).toHaveText('Cancelled.');
@@ -110,6 +135,49 @@ test('form downloads match native and survive failed and cancelled builds', asyn
     }
   }
   expect(errors).toEqual([]);
+});
+
+test('PNG quality controls palette availability and downloads match native', async ({ page }) => {
+  await page.goto('/');
+  const quality = page.locator('[name=quality]'), colors = page.locator('[name=colors]');
+  await expect(quality).toHaveValue('80');
+  await expect(colors).toBeDisabled();
+  await quality.fill('100');
+  await colors.fill('32');
+  await quality.fill('80');
+  await expect(colors).toBeDisabled();
+  await quality.fill('100');
+  await expect(colors).toBeEnabled();
+  await expect(colors).toHaveValue('32');
+  await quality.fill('80');
+  await page.locator('input[type=file]').setInputFiles(fixture('gradient'));
+  await quality.fill('0');
+  expect(await page.locator('form').evaluate((form) => form.checkValidity())).toBe(false);
+  await quality.fill('80');
+  expect(await page.locator('form').evaluate((form) => form.checkValidity())).toBe(true);
+  await page.getByRole('button', { name: 'Generate', exact: true }).click();
+  await expect(page.locator('output')).toContainText('Done in', { timeout: 120_000 });
+  const expected = summary(await buildFiles({ input: fixture('gradient'), quality: 80, manifest: true }));
+  expect(await downloads(page)).toEqual(expected.files);
+  await expect(colors).toBeDisabled();
+  await quality.fill('100');
+  await expect(colors).toBeEnabled();
+  await expect(colors).toHaveValue('32');
+});
+
+test('form defaults skip extra compression and opt-in matches native bytes', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('input[name=zopfli]')).not.toBeChecked();
+  expect(await page.locator('header img').getAttribute('src'))
+    .toBe(await page.locator('link[type="image/svg+xml"]').getAttribute('href'));
+  await page.locator('input[type=file]').setInputFiles(fixture('tiles'));
+  await page.locator('select[name=mode]').selectOption('fast');
+  await page.locator('input[name=zopfli]').check();
+  await page.getByRole('button', { name: 'Generate', exact: true }).click();
+  await expect(page.locator('output')).toHaveClass('good', { timeout: 90_000 });
+  const expected = summary(await buildFiles({ input: fixture('tiles'), mode: 'fast', zopfli: true, manifest: true }));
+  expect(await downloads(page)).toEqual(expected.files);
+  expect(expected.files.filter((f) => f.name.endsWith('.svg')).map((f) => f.name)).toEqual(['icon.svg']);
 });
 
 test('missing document isolation gives the CLI alternative and restores form controls', async ({ page }) => {

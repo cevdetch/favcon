@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { resolveQuality } from '../lib/config.mjs';
 import { normaliseVars } from '../lib/core.mjs';
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
@@ -31,16 +32,19 @@ export const cacheKey = ({ version, source, options, engine }) => sha256(JSON.st
   engine,
   // Shape is canonicalised (sizes sorted), but DEFAULTS ARE NOT SUBSTITUTED: two copies of
   // every default would let the cache serve old bytes, unnoticed, after one changed.
+  // Quality uses the shared resolver because an explicit palette selects its compatibility path.
   // `version` covers that. Every build option is in the key.
   options: {
     colors: options.colors ?? null,
+    quality: Number(resolveQuality(options)),
     sizes: options.sizes ? [...options.sizes].map(Number).sort((a, b) => a - b) : null,
     bg: options.bg === undefined ? null : options.bg,
     padding: options.padding ?? null,
     vars: [...normaliseVars(options.vars)].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
     animation: options.animation !== false,
     manifest: options.manifest ?? false,
-    mode: options.mode ?? 'release',
+    mode: options.zopfli ? options.mode ?? 'release' : null,
+    zopfli: options.zopfli ?? false,
     // The manifest's bytes depend on it, so a changed base must not hit an old slot.
     base: options.base ?? '/',
   },
