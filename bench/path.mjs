@@ -12,7 +12,8 @@ const message = 'Benchmark path must be inside the checkout or system temporary 
 export function benchmarkPath(value) {
   if (typeof value !== 'string' || !value.length || value.includes('\0')) throw new Error(message);
   const path = resolve(value);
-  if (!path.startsWith(checkout + sep) && !path.startsWith(temporary + sep)) throw new Error(message);
+  const prefix = (path.startsWith(checkout + sep) ? checkout : temporary) + sep;
+  if (!path.startsWith(prefix)) throw new Error(message);
 
   // Check the nearest existing ancestor before mkdir/read/import. A lexical
   // prefix alone would allow an existing symlink to escape either workspace.
