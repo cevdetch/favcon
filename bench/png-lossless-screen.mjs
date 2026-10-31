@@ -3,13 +3,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import * as image from '@napi-rs/image';
 import { engineVersions } from '../bin/favseed.mjs';
 import { decode } from '../test/lib/png.mjs';
+import { benchmarkPath } from './path.mjs';
 
 assert.ok(process.argv[2] && process.argv[3], 'Pass effort inputs and fresh output directory');
-const input = resolve(process.argv[2]), out = resolve(process.argv[3]);
+const input = benchmarkPath(process.argv[2]), out = benchmarkPath(process.argv[3]);
 mkdirSync(out, { recursive: true }); assert.ok(!readdirSync(out).length);
 const metadata = JSON.parse(readFileSync(join(input, 'metadata.json')));
 assert.deepEqual(metadata.engine, engineVersions());

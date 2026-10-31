@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as image from '@napi-rs/image';
 import { engineVersions, loadEngine, optimiseSvg } from '../bin/favseed.mjs';
@@ -11,9 +11,10 @@ import { normaliseOptions } from '../lib/config.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { decode } from '../test/lib/png.mjs';
 import { reference, score } from '../test/lib/accuracy.mjs';
+import { benchmarkPath } from './path.mjs';
 
 assert.ok(process.argv[2], 'Pass a fresh result directory');
-const out = resolve(process.argv[2]); mkdirSync(out, { recursive: true }); assert.ok(!readdirSync(out).length);
+const out = benchmarkPath(process.argv[2]); mkdirSync(out, { recursive: true }); assert.ok(!readdirSync(out).length);
 const engine = await loadEngine(), samples = [];
 const marks = ['general', 'flat', 'second', 'mask', 'heavy', 'animated', 'tiles', 'wide', 'gradient', 'smil', 'dark'];
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');

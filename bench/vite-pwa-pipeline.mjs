@@ -5,13 +5,15 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { cpus } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { decode } from '../test/lib/png.mjs';
+import { benchmarkPath } from './path.mjs';
 
 assert.ok(process.argv[2] && process.argv[3], 'Pass isolated dependencies and fresh result directory');
-const deps = createRequire(join(resolve(process.argv[2]), 'package.json'));
-const out = resolve(process.argv[3]), section = process.argv[4] ?? 'generator';
+const dependencyDirectory = benchmarkPath(process.argv[2]);
+const out = benchmarkPath(process.argv[3]), section = process.argv[4] ?? 'generator';
+const deps = createRequire(join(dependencyDirectory, 'package.json'));
 assert.ok(['generator', 'plugin'].includes(section));
 const selectedArms = process.argv[6]?.split(',');
 const selectArms = (available) => {

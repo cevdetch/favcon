@@ -2,13 +2,14 @@
 // node bench/pipeline-concurrency.mjs /fresh/results [iterations=0]
 import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { join } from 'node:path';
 import { loadEngine, optimiseSvg, engineVersions } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
+import { benchmarkPath } from './path.mjs';
 
 assert.ok(process.argv[2], 'Pass fresh output directory');
-const out = resolve(process.argv[2]), iterations = Number(process.argv[3] ?? 0);
+const out = benchmarkPath(process.argv[2]), iterations = Number(process.argv[3] ?? 0);
 assert.ok([0, 5, 15, 120].includes(iterations));
 mkdirSync(out, { recursive: true }); assert.ok(!readdirSync(out).length);
 const source = readFileSync(new URL('../lib/pipeline.mjs', import.meta.url), 'utf8');

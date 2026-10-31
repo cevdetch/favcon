@@ -7,6 +7,12 @@ See [DEFAULTS.md](DEFAULTS.md) for the current default, fresh Vite PWA compariso
 For iteration-count and Vite PWA encoder measurements, see [EFFORT.md](EFFORT.md).
 For whole-generator/Vite builds and the later palette optimization, see [COMPETITOR.md](COMPETITOR.md).
 
+For the positional-path benchmark commands below and in those reports, keep snapshots,
+isolated dependencies, archives and results below this checkout (for example `bench/out/`)
+or the system temporary directory. Absolute and relative paths are supported; symlinks
+that escape those locations are rejected. Replace the illustrative `/saved`, `/fresh`,
+`/isolated` and `/path/to` prefixes accordingly.
+
 `lib/zopfli.wasm` compiles the exact Google Zopfli source used by `@gfx/zopfli` 1.0.15,
 revision `ae43a8b73827577c4b19b005b6eed81f5cf9bbac`. Both hosts instantiate this asset
 through `lib/zopfli.mjs`. The original package is a development-only byte comparator.

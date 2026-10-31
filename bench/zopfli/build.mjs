@@ -7,11 +7,12 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { benchmarkPath } from '../path.mjs';
 
 const revision = 'ae43a8b73827577c4b19b005b6eed81f5cf9bbac';
 const archives = [
-  { path: process.argv[2], sha: '9c2fe109838ce43ec90e88ae4a74473c4c46667e32a2980eeb62a04aa1748829' },
-  { path: process.argv[3], sha: '9d813544eeebe38b7b8f2244ed591de46b6db812c6dd1a257ff9f0d2a905a2be' },
+  { path: benchmarkPath(process.argv[2]), sha: '9c2fe109838ce43ec90e88ae4a74473c4c46667e32a2980eeb62a04aa1748829' },
+  { path: benchmarkPath(process.argv[3]), sha: '9d813544eeebe38b7b8f2244ed591de46b6db812c6dd1a257ff9f0d2a905a2be' },
 ];
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 for (const { path, sha } of archives) {
