@@ -20,6 +20,7 @@ import { DEFAULT_COLORS, squareIconSvg } from '../lib/core.mjs';
 import { reference, score } from '../test/lib/accuracy.mjs';
 import { decode } from '../test/lib/png.mjs';
 import { nativeVersions, run } from './native.mjs';
+import { precisionSweep } from './precision.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(HERE);
@@ -64,6 +65,7 @@ const rawRenders = async () => {
 // ------------------------------------------------------------------ sweeps --
 
 const sweeps = {};
+sweeps.precision = () => precisionSweep(join(OUT, 'precision'));
 
 sweeps.accuracy = async () => {
   const cols = [8, 16, 32, 64, 256];
@@ -453,7 +455,7 @@ const main = async () => {
     process.exit(1);
   }
 
-  const versions = { ...(await nativeVersions()), ...engineVersions() };
+  const versions = { ...(names.some((name) => name !== 'precision') ? await nativeVersions() : {}), ...engineVersions() };
 
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });

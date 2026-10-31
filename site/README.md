@@ -29,12 +29,19 @@ The browser imports the same `lib/core.mjs`, `lib/config.mjs`, `lib/engine.mjs`,
 Matching source, normalized options, and mode produce identical files, links, and placement.
 The browser includes a manifest by default; the CLI needs `--manifest` to match.
 
-PNG quality defaults to 80. Choose 100 for the previous higher-fidelity output; lower values trade raster fidelity
+PNG quality defaults to 80. Choose 100 for the higher-fidelity fixed-palette encoding path; lower values trade raster fidelity
 for size using the same native target in both hosts. Set `--quality 80` or `quality: 80` to match
 the form; explicit quality below 100 cannot combine with custom `colors`. Custom colors without
 quality retain the quality-100 path. The form disables and preserves that field until quality
 returns to 100. Quality is not a measured error percentage and smaller output is not guaranteed.
 See [quality measurements](../bench/zopfli/QUALITY.md).
+
+Full builds select SVG precision against minimally prepared source at 512px, allowing at most
+1% bad pixels on either a black or white composite before PNG quantization. Passing marks keep
+compact rounding; failed candidates retry higher precision, then retain source geometry if needed.
+This checks the static base appearance, not every animation frame or display size. The
+[current precision report](../bench/precision/README.md) records accuracy, byte/runtime effects
+and the refreshed Vite PWA comparison. PNG quality does not disable SVG validation.
 
 Standard builds skip Zopfli. Extra PNG compression is an explicit opt-in, matching `--zopfli`
 or `zopfli: true` in the CLI/API; release effort uses 120 iterations and fast effort uses 15.
@@ -104,9 +111,9 @@ To exercise an already-running dev or preview server, set
 ### Other browsers and mobile emulation
 
 The pinned Playwright suite runs desktop Chromium, Firefox and WebKit, plus Pixel 7 and
-iPhone 13 emulation. It reuses the native references: all 15 cases on desktop, and four
-representative cases on mobile (gradient, release compression, transparent aliases and custom
-manifest/animation options). It also checks cache ownership, ZIP downloads, page timers,
+iPhone 13 emulation. It reuses native references, including small-coordinate and source-fallback
+cases on desktop and mobile alongside gradient, release compression, transparent aliases and custom
+manifest/animation options. It also checks cache ownership, ZIP downloads, page timers,
 cancellation/retry, a 1024px raster after shared-memory growth, failure preservation, missing
 document/worker isolation and touch controls at a 320 px viewport. The document and worker
 both validate their own WASM requirements.

@@ -29,11 +29,14 @@ test('files and metadata match the CLI; archives, cache and page timers work', a
   page.on('pageerror', (error) => errors.push(error.message));
   await checkPage(page);
   const selected = isMobile ? cases.filter((item) =>
-    ['gradient/fast', 'tiles/release', 'gradient/quality60-zopfli', 'transparent-aliases', 'custom-manifest'].includes(item.name)) : cases;
+    ['grid-1/precision', 'grid-tiny/precision', 'grid-fallback/precision', 'gradient/fast', 'tiles/release', 'gradient/quality60-zopfli', 'transparent-aliases', 'custom-manifest'].includes(item.name)) : cases;
   let fileCount = 0;
   for (const item of selected) {
     await test.step(item.name, async () => {
-      const input = fixture(item.mark), source = await readFile(input, 'utf8');
+      const input = fixture(item.mark), original = await readFile(input, 'utf8');
+      // Export annotations must not change bytes, including the source fallback.
+      const source = item.mark.startsWith('grid-')
+        ? `<!-- exported <svg> --><?export metadata?>${original}<!-- exported logo --><?export done?>` : original;
       const options = { manifest: true, ...item.options };
       const expected = summary(await buildFiles({ input, ...options }));
       const actual = await page.evaluate(({ source, options }) => window.favseedCheck.build(source, options), { source, options });

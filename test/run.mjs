@@ -283,7 +283,8 @@ describe('accuracy', () => {
     assert.deepEqual([...decode(a).data], [...decode(b).data], 'zopfli changed a pixel');
   });
 
-  for (const name of ['general', 'flat', 'second', 'mask', 'heavy', 'animated', 'wide', 'smil', 'tiles']) {
+  for (const name of ['general', 'flat', 'second', 'mask', 'heavy', 'animated', 'wide', 'smil', 'tiles',
+    'gradient', 'grid-1', 'grid-16', 'grid-24', 'grid-tiny', 'grid-fallback']) {
     it(`${name}: every raster is inside the bar`, async () => {
       const { out } = await accuracyBuild(name);
       const source = fixture(`${name}.svg`);

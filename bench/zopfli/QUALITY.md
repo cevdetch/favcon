@@ -1,5 +1,10 @@
 # PNG quality: smaller optional raster output
 
+These are historical measurements before selective SVG precision. Quality 80 remains the
+default, but the corrected gradient changes current byte totals and source-error results;
+see the [current precision report](../precision/README.md). The byte-equality statements
+below describe the recorded pre-quality control, not an opt-out from later SVG corrections.
+
 Measured 31 October 2026 on Ryzen 7 7840U, Linux x64, Node 26.12.1, image 1.15.0. Native/browser use the
 same quality path. Public `--quality N` and `quality: N` accept integers 1–100; the browser has the
 same control. Default 80 is selected from these measurements. Explicit quality 100 reproduces all pre-quality

@@ -1,4 +1,5 @@
 export const cases = [
+  ...['grid-1', 'grid-16', 'grid-24', 'grid-tiny', 'grid-fallback'].map((mark) => ({ name: `${mark}/precision`, mark, options: {} })),
   { name: 'gradient/quality100', mark: 'gradient', options: { quality: 100 } },
   { name: 'gradient/quality80', mark: 'gradient', options: { quality: 80 } },
   { name: 'gradient/quality60-zopfli', mark: 'gradient', options: { quality: 60, zopfli: true, mode: 'fast', sizes: [32] } },

@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { engineVersions, icoWrap, loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
+import { DEFAULT_QUALITY } from '../lib/core.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { decode } from '../test/lib/png.mjs';
 import { score } from '../test/lib/accuracy.mjs';
@@ -53,6 +54,8 @@ for (const mark of ['tiles', 'general', 'heavy', 'gradient']) {
   } });
 }
 const defaultArms = [
+  { name: 'favseed-default', run: async (sample) => engine.finish(
+    await engine.encode(sample.raw, { quality: DEFAULT_QUALITY }), { iterations: 0 }) },
   { name: 'vite-default', run: async (sample) => (await generateTransparentAsset('png', sample.raw, sample.px,
     { padding: 0, resizeOptions: { fit: 'fill' }, outputOptions: defaultPngCompressionOptions })).toBuffer() },
   { name: 'vite-palette-off', run: async (sample) => (await generateTransparentAsset('png', sample.raw, sample.px,
@@ -73,9 +76,10 @@ const arms = selectedArms ? selectedArms.map((name) => availableArms.find((arm) 
   : qualityLevels.length ? qualityArms : defaultArms;
 const metadata = { node: process.version, cpu: cpus()[0]?.model, cores: cpus().length,
   engine: engineVersions(), vitePwa: packageJson.version, sharp: sharp.versions,
-  sourceSha256: Object.fromEntries(['lib/core.mjs', 'lib/config.mjs', 'lib/engine.mjs', 'lib/pipeline.mjs'].map((name) => [name, hash(readFileSync(new URL('../' + name, import.meta.url)))])),
+  sourceSha256: Object.fromEntries(['lib/core.mjs', 'lib/config.mjs', 'lib/engine.mjs', 'lib/pipeline.mjs', 'lib/svg-precision.mjs'].map((name) => [name, hash(readFileSync(new URL('../' + name, import.meta.url)))])),
   inputSha256: Object.fromEntries(samples.map((sample) => [sample.id, hash(sample.raw)])),
   favseedQuality: 100, // Explicit colors256 path; independent of the public default.
+  favseedDefaultQuality: DEFAULT_QUALITY, // favseed-default uses the current public default and skips Zopfli.
   arms: arms.map((arm) => arm.name), lowEffort, qualityLevels, repetitions: 2, options: defaultPngCompressionOptions,
   note: 'Encoding only on fixed already-placed pixels, no SVG/raster/placement/file-count difference. Vite API with padding0/identity resize. Pixel error is vs raw rendered pixels, not original SVG. 32px ICO is reported separately from the default 1% accuracy gate.' };
 writeFileSync(join(out, 'metadata.json'), JSON.stringify(metadata, null, 2) + '\n');

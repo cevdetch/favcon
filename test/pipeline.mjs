@@ -7,11 +7,54 @@ import { loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { header } from './lib/png.mjs';
+import { score } from './lib/accuracy.mjs';
+import { gridSvg } from './fixtures/small-grid.gen.mjs';
 
 const read = (n) => readFileSync(new URL(`./fixtures/${n}.svg`, import.meta.url), 'utf8');
 const engine = await loadEngine();
 const opts = ({ iterations = 0, ...extra } = {}) => ({ ...normaliseOptions({ sizes: [32], ...extra }), iterations });
 const run = (name, extra) => buildSet(read(name), opts(extra), { engine, optimiseSvg, name: `${name}.svg` });
+const rendered = async (svg) => {
+  const { width, height, rgba } = await engine.renderRgba(svg, 512);
+  return { width, height, data: rgba };
+};
+
+describe('selective SVG precision', () => {
+  for (const size of [1, 16, 24, .001]) {
+    it(`keeps the ${size}-unit mark within the source SVG error budget`, async () => {
+      const source = gridSvg(size);
+      const set = await buildSet(source, opts({ padding: 20 }), { engine, optimiseSvg });
+      const icon = new TextDecoder().decode(set.files.find((f) => f.name === 'icon.svg').bytes);
+      const error = score(await rendered(icon), await rendered(source));
+      assert.ok(error.pct <= 1, `SVG source error ${error.pct}% exceeds 1%`);
+    });
+  }
+
+  it('keeps gradient stop rounding within the SVG error budget', async () => {
+    const source = read('gradient'), set = await run('gradient', { padding: 20 });
+    const icon = new TextDecoder().decode(set.files.find((f) => f.name === 'icon.svg').bytes);
+    assert.ok(score(await rendered(icon), await rendered(source)).pct <= 1);
+  });
+
+  it('retains the compact p1 output for already-accurate marks', async () => {
+    for (const mark of ['general', 'heavy']) {
+      const set = await run(mark, { padding: 20 });
+      const icon = new TextDecoder().decode(set.files.find((f) => f.name === 'icon.svg').bytes);
+      assert.equal(icon, optimiseSvg(read(mark)).data);
+    }
+  });
+
+  it('prepares an unrounded reference with resolved variables and requested motion', async () => {
+    const source = read('gradient').replace('#E9873F', 'var(--accent, #E9873F)');
+    const prepared = optimiseSvg(source, { reference: true, vars: { accent: '#112233' } });
+    assert.match(prepared.data, /offset="\.42"/);
+    assert.match(prepared.data, /offset="\.78"/);
+    assert.match(prepared.data, /#112233/);
+    assert.doesNotMatch(prepared.data, /var\(/);
+    assert.match(optimiseSvg(read('animated'), { reference: true }).data, /@keyframes/);
+    assert.doesNotMatch(optimiseSvg(read('animated'), { reference: true, icon: true }).data, /@keyframes/);
+  });
+});
 
 describe('buildSet', () => {
   it('returns the set in the CLI order, as bytes', async () => {
@@ -51,10 +94,11 @@ describe('buildSet', () => {
     assert.doesNotMatch(new TextDecoder().decode(still.files.find((f) => f.name === 'icon.svg').bytes), /@keyframes|animation:/);
   });
 
-  it('optimizes the preserved SVG once and leaves its non-square viewBox intact', async () => {
+  it('optimizes an already-accurate SVG once and leaves its non-square viewBox intact', async () => {
     let calls = 0;
     const set = await buildSet(read('wide'), opts(), { engine, optimiseSvg: (...args) => {
-      calls++; return optimiseSvg(...args);
+      if (!args[1]?.reference) calls++;
+      return optimiseSvg(...args);
     } });
     assert.equal(calls, 1);
     const icon = new TextDecoder().decode(set.files.find((f) => f.name === 'icon.svg').bytes);
