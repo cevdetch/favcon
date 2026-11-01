@@ -422,6 +422,11 @@ The short version, because these are the parts that look wrong until you know wh
 - **Bounded concurrency overlaps raster jobs and complete alignment searches.** The shared
   scheduler limits active canvas work, keeps large custom sizes serial, and drains failures
   before a retry. Candidate selection and output order remain deterministic.
+- **Placement probes avoid oversized transparent margins.** A small mark still enlarges into
+  its safe zone. Large-margin searches use target-size canvases; other probes stay within
+  twice the target size, retaining ordinary render reuse. The full candidate walk remains;
+  this bounds each probe, not the number of probes or process RAM.
+  See the [placement measurements](https://github.com/cevdetch/favseed/blob/main/bench/placement/README.md).
 
 ## Contributing and help
 

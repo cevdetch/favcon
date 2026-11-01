@@ -22,6 +22,11 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Bound placement-probe canvases to twice the target size, using target-size probes for
+  searches above that threshold. Keep small marks enlarged into the safe zone, retain
+  ordinary render reuse, the full candidate walk and existing selection/scheduling rules.
+  Account for actual dimensions in the work estimate. Bump to 0.6.0 for integration caches.
+
 - Use one 48×48 PNG-backed ICO fallback and matching link metadata across CLI, browser,
   Vite, Astro and the site. Keep explicit 32px PNGs and all non-ICO file bytes unchanged.
   Bump to 0.5.0 so integration caches regenerate the ICO.
