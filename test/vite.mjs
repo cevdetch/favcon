@@ -139,7 +139,7 @@ describe('favseed/vite in a build', () => {
       assert.ok(existsSync(join(root, 'dist', f)), f);
     }
     const html = readFileSync(join(root, 'dist', 'index.html'), 'utf8');
-    assert.match(html, /<link rel="icon" href="\/favicon\.ico" sizes="32x32">/);
+    assert.match(html, /<link rel="icon" href="\/favicon\.ico" sizes="48x48">/);
     assert.match(html, /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png">/);
   });
 

@@ -54,6 +54,21 @@ test('files and metadata match the CLI; archives, cache and page timers work', a
   console.log(`${test.info().project.name}: ${fileCount} files match native across ${selected.length} cases`);
 });
 
+test('site favicon metadata and actual ICO payload both declare48px', async ({ page }) => {
+  for (const path of ['/', '/404']) {
+    await page.goto(path);
+    const icon = page.locator('link[rel="icon"][href="/favicon.ico"]');
+    await expect(icon).toHaveAttribute('sizes', '48x48');
+  }
+  const response = await page.request.get('/favicon.ico');
+  expect(response.ok()).toBe(true);
+  const ico = await response.body();
+  expect(ico.readUInt16LE(4)).toBe(1);
+  expect([...ico.subarray(6, 8)]).toEqual([48, 48]);
+  const offset = ico.readUInt32LE(18);
+  expect([ico.readUInt32BE(offset + 16), ico.readUInt32BE(offset + 20)]).toEqual([48, 48]);
+});
+
 test('invalid options, cancellation and worker retry leave the engine usable', async ({ page }) => {
   await checkPage(page);
   const source = await readFile(fixture('general'), 'utf8'), options = { mode: 'fast', sizes: [32] };

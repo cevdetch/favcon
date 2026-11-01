@@ -56,7 +56,7 @@ resvg, pngquant and oxipng for its native reference arm.
 
 1. Produces `icon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`,
    `icon-512.png`, and nothing else.
-2. Dimensions are exact: 180×180, 192×192, 512×512; the ICO reports a single 32×32 entry.
+2. Dimensions are exact: 180×180, 192×192, 512×512; the ICO reports a single 48×48 entry.
 3. `icon.svg` preserves animation, styling and accessibility by default, including referenced
    classes/IDs, reduced-motion rules, `xmlns` and `viewBox`. Explicit `--no-animation` strips
    motion and accessibility while retaining color-scheme styling when present.
@@ -68,12 +68,12 @@ resvg, pngquant and oxipng for its native reference arm.
    byte-identical to `icotool -c -r` wherever icotool is available.
 8. Default-quality padded PNGs in the accuracy fixtures meet `pct <= 1.0 %`, scored against
    **background-matched references, padded the same way**. ICO source error is reported separately:
-   the unchanged heavy ICO still reaches 1.660%. See the [current precision report](bench/precision/README.md).
+   the 48px ICO reaches 1.215% on two small-grid fixtures. See the [ICO report](bench/ico-size/README.md).
    The SVG's static 512px budget does not guarantee this threshold at every raster size or quality.
 9. `apple-touch-icon.png` has no alpha channel when `--bg` is set (the default).
 10. `--manifest` writes valid JSON: the size icons as `"any maskable"` when `--bg` is opaque
     and `"any"` alone when it is `none`, and never `icon.svg`; `--html` emits the `<link>` set with
-    `sizes="32x32"` on the ICO.
+    `sizes="48x48"` on the ICO.
     Every opaque pixel of every padded icon lies inside the safe circle; a pixel-grid mark is
     snapped to whole pixels, a curved one keeps its exact fit.
 11. Re-running with identical inputs and identical engine versions produces byte-identical outputs.
@@ -89,9 +89,9 @@ resvg, pngquant and oxipng for its native reference arm.
     Reject quality outside integer 1–100 and explicit colors combined with quality below 100.
 
 15. Long options accept `--opt=value`; a flag that takes no argument rejects one.
-16. `--sizes 32` renders twice on purpose: once padded for `icon-32.png`, once unpadded for
-    the ICO payload. Under `--bg none` the icon is unpadded too, and the two are the same
-    bytes again.
+16. `--sizes 48` renders twice when padded: once for `icon-48.png`, once unpadded for
+    the ICO payload. Under `--bg none` they share one render and identical PNG bytes.
+    An explicit `--sizes 32` still writes a separate 32px PNG.
 17. Non-square raster sources retain their rectangular viewport inside a centered square
     canvas, including percentage lengths and shifted origins. `icon.svg` keeps its original
     viewport. ViewBoxes differing by more than 1% warn on stderr; near-square ones remain quiet.

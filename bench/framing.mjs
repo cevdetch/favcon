@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { optimize, builtinPlugins } from 'svgo';
 import { engineVersions, loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
+import { ICO_SIZE } from '../lib/core.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { reference, score } from '../test/lib/accuracy.mjs';
 import { decode } from '../test/lib/png.mjs';
@@ -54,9 +55,9 @@ export async function framingSweep(out) {
     sources.set(mark, source);
     const file = join(sourcesDir, mark + '.svg'), golden = join(goldDir, mark + '.svg');
     writeFileSync(file, source); writeFileSync(golden, goldens.get(mark) ?? source);
-    for (const px of [32, 180, 192, 512]) {
-      refs.set(mark + '/' + px, await reference({ source: golden, px, bg: px === 32 ? null : '#000000',
-        vars: {}, fitted: px !== 32 }));
+    for (const px of new Set([32, ICO_SIZE, 180, 192, 512])) {
+      refs.set(mark + '/' + px, await reference({ source: golden, px, bg: px === 32 || px === ICO_SIZE ? null : '#000000',
+        vars: {}, fitted: px !== 32 && px !== ICO_SIZE }));
     }
   }
 
@@ -94,7 +95,8 @@ export async function framingSweep(out) {
     process.stderr.write(`framing: repetition ${rep}, ${mark}\n`);
   }
   const squares = ORIGINAL.filter((mark) => mark !== 'wide');
-  for (const mark of squares) assert.deepEqual(stable.get('before/' + mark), stable.get('preserved/' + mark), 'Square set changed: ' + mark);
+  const nonIco = (arm, mark) => stable.get(arm + '/' + mark).filter((f) => f.name !== 'favicon.ico');
+  for (const mark of squares) assert.deepEqual(nonIco('before', mark), nonIco('preserved', mark), 'Square non-ICO files changed: ' + mark);
   for (const mark of MARKS.filter((mark) => mark !== 'aspect-percent')) {
     assert.equal(stable.get('before/' + mark).find((f) => f.name === 'icon.svg').sha256,
       stable.get('preserved/' + mark).find((f) => f.name === 'icon.svg').sha256, 'SVG changed: ' + mark);
@@ -116,9 +118,10 @@ export async function framingSweep(out) {
     beforeHashes, currentHashes: Object.fromEntries(['core.mjs', 'config.mjs', 'pipeline.mjs', 'engine.mjs', 'svg-precision.mjs']
       .map((name) => [name, hash(readFileSync(join(ROOT, 'lib', name)))])),
     sourceHashes: Object.fromEntries([...sources].map(([name, svg]) => [name, hash(svg)])),
-    repetitions: 3, warmup: 0, arms, squareSetsUnchanged: squares,
+    repetitions: 3, warmup: 0, arms, squareNonIcoFilesUnchanged: squares, icoSizes: { before: 32, current: ICO_SIZE },
+    comparisonScope: 'Whole pipelines: current also includes the subsequent ICO-size change; not an isolated framing effect.',
     note: 'Rotated native full in-memory builds; warmup excluded. Timed optimization, runtime validation, placement and encoding; excluded imports, input reads, independent grading references, post-build scoring and file writes. Default quality80, no Zopfli. Literal square goldens for non-square sources; independent source placement for PNGs; ICO separately reported. Previous percent-source build fails and is excluded from paired totals. No browser timing or peak-memory claim.' }, summaries, rows };
   writeFileSync(join(out, 'results.json'), JSON.stringify(data, null, 2) + '\n');
   return { title: 'Preserved non-square raster proportions', note: data.metadata.note,
-    text: JSON.stringify(summaries, null, 2), summary: `Ten square sets byte-identical; data and files: bench/out/framing/ (control ${BASE.slice(0, 7)}).` };
+    text: JSON.stringify(summaries, null, 2), summary: `Ten square sets have byte-identical non-ICO files; data and files: bench/out/framing/ (control ${BASE.slice(0, 7)}).` };
 }

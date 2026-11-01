@@ -11,6 +11,10 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Use one 48×48 PNG-backed ICO fallback and matching link metadata across CLI, browser,
+  Vite, Astro and the site. Keep explicit 32px PNGs and all non-ICO file bytes unchanged.
+  Bump to 0.5.0 so integration caches regenerate the ICO.
+
 - Preserve wide/tall logo proportions in square PNG/ICO output, including percentage geometry
   and shifted viewBox origins. Keep the exported SVG viewport and square-input bytes unchanged.
   Update the non-square warning and source-reference framing; retain existing safe-zone search,

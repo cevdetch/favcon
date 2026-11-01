@@ -1,5 +1,9 @@
 # Preserved raster proportions — 1 November 2026
 
+These recorded measurements use the historical 32px ICO. Current builds use 48px;
+see the [ICO report](../ico-size/README.md). The runnable sweep compares its immutable
+baseline with the current whole pipeline, including later changes.
+
 Non-square sources now retain their original rectangular SVG viewport inside a centered
 square raster canvas. This preserves shape, shifted origins and percentage coordinates.
 Rewriting the source viewBox to a square would change percentage geometry. The exported

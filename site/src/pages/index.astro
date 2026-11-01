@@ -27,7 +27,7 @@ const jsonLd = JSON.stringify({
 
 const outputs = [
   ['icon.svg', 'One optimized SVG for the favicon and page images, preserving animation and styling.'],
-  ['favicon.ico', 'One 32x32 entry, a raw PNG in a 22-byte container.'],
+  ['favicon.ico', 'One 48x48 entry, a raw PNG in a 22-byte container.'],
   ['apple-touch-icon.png', '180x180 on the chosen ground, the mark placed in the safe zone.'],
   ['icon-192.png, icon-512.png', 'On the same ground, placed the same way. The manifest\'s "any maskable" icons.'],
   ['site.webmanifest', 'Icons only. Merge your own name and theme_color.'],
@@ -41,7 +41,7 @@ const outputs = [
 <title>{title}</title>
 <meta name="color-scheme" content="light dark" />
 <!-- The site's own set, built by favseed: the same block `favseed --html --manifest` prints. -->
-<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" sizes="48x48" />
 <link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
@@ -130,9 +130,9 @@ const outputs = [
     <p>This page runs the same pinned image engine and build pipeline as the command line.
       Matching SVG, options, and build mode produce identical SVG, PNG, ICO, and manifest
       files. Builds run in a worker so the page stays responsive; Cancel stops the build.</p>
-    <p>In a four-logo benchmark using matching raster inputs, the default set used 0.8% more
+    <p>In a four-logo benchmark using matching raster inputs, the default set used 0.5% more
       PNG/ICO bytes than Vite PWA assets-generator 2.0.0’s default, with lower measured PNG pixel error.
-      <a href="https://github.com/cevdetch/favseed/blob/main/bench/precision/README.md">Measurements and method</a>.</p>
+      <a href="https://github.com/cevdetch/favseed/blob/main/bench/ico-size/README.md">Measurements and method</a>.</p>
     <p>Standard builds skip Zopfli. Enable extra PNG compression to trade generation time for
       smaller files, matching <code>--zopfli</code> in the CLI. This page includes a manifest; use
       <code>--manifest</code> for the matching CLI set.</p>
