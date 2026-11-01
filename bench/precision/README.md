@@ -1,5 +1,9 @@
 # Selective SVG precision — 31 October 2026
 
+These measurements predate the centered non-square raster viewport. See the
+[framing report](../framing/README.md) for that later change. The matched Vite inputs
+here are square sources and retain the same output bytes.
+
 Full builds try precision 1, 2, 3, 4, 6 and 8, starting each attempt from the original
 source. The first passing candidate wins. Validation compares unquantized 512px pixels
 against minimally prepared source: at most 1% bad pixels on either a black or white

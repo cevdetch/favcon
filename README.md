@@ -385,7 +385,8 @@ content: delete or move the file, and favseed writes its own.
 Every step was chosen by measurement. Earlier decisions are in
 **[docs/DECISIONS.md](https://github.com/cevdetch/favseed/blob/main/docs/DECISIONS.md)** and the native-reference sweeps in
 **[docs/BENCHMARKS.md](https://github.com/cevdetch/favseed/blob/main/docs/BENCHMARKS.md)**.
-Current SVG accuracy, byte and timing results are in the [precision report](https://github.com/cevdetch/favseed/blob/main/bench/precision/README.md).
+Current raster proportions, byte and timing results are in the [framing report](https://github.com/cevdetch/favseed/blob/main/bench/framing/README.md).
+The [precision report](https://github.com/cevdetch/favseed/blob/main/bench/precision/README.md) records the SVG rounding policy and matched Vite PWA comparison.
 
 The short version, because these are the parts that look wrong until you know why:
 
@@ -399,6 +400,10 @@ The short version, because these are the parts that look wrong until you know wh
   passes, the SVG retains its source geometry. Animation, styling and accessibility remain
   unless you explicitly request `--no-animation`. This is not a guarantee for every display
   size, animation frame or media state.
+- **Square raster canvases preserve proportions.** Wide and tall SVG viewports are centered
+  inside the PNG/ICO canvas. Transparent exports keep transparent bands; opaque PNGs use your
+  chosen background and the existing safe-zone fit. `icon.svg` keeps its original viewport.
+  See the [framing measurements](https://github.com/cevdetch/favseed/blob/main/bench/framing/README.md).
 - **Quantise before you recompress.** The quantiser re-encodes from scratch, so any order
   ending in quantisation throws away everything the recompressor did. Measured at 192 px, the
   wrong order is 21.0 % bigger.

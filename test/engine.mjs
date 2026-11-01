@@ -10,10 +10,11 @@ import { crc32, inflateSync } from 'node:zlib';
 import referenceZopfli from '@gfx/zopfli';
 
 import { loadEngine, optimiseSvg } from '../bin/favseed.mjs';
-import { placeInSafeZone, squareIconSvg } from '../lib/core.mjs';
+import { nestForMask, placeInSafeZone, squareIconSvg } from '../lib/core.mjs';
 import { createEngine, wrapForSize } from '../lib/engine.mjs';
 import { score } from './lib/accuracy.mjs';
 import { decode } from './lib/png.mjs';
+import { framingCases } from './lib/framing.mjs';
 
 const FIX = new URL('./fixtures/', import.meta.url);
 const icon = (name) =>
@@ -91,6 +92,68 @@ describe('render', () => {
 
   it('refuses an SVG without a viewBox', () => {
     assert.throws(() => wrapForSize('<svg xmlns="http://www.w3.org/2000/svg"></svg>', 32), /viewBox/);
+  });
+});
+
+describe('square raster framing', () => {
+  for (const { mark, golden } of framingCases) {
+    it(`${mark} preserves source shape and alignment`, async () => {
+      const source = readFileSync(new URL(`${mark}.svg`, FIX), 'utf8');
+      const actual = dec(await engine.render(squareIconSvg(optimiseSvg(source).data).data, 128));
+      assert.equal(score(actual, dec(await engine.render(golden, 128))).pct, 0);
+    });
+  }
+
+  it('keeps both near-square directions centered without distorting circles', async () => {
+    for (const [w, h, cx, cy] of [[100, 101, 50, 50.5], [101, 100, 50.5, 50]]) {
+      const source = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><circle cx="${cx}" cy="${cy}" r="32"/></svg>`;
+      const { data, warning } = squareIconSvg(source);
+      const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 101 101"><circle cx="50.5" cy="50.5" r="32"/></svg>';
+      assert.equal(warning, null);
+      assert.equal(score(dec(await engine.render(data, 202)), dec(await engine.render(golden, 202))).pct, 0);
+    }
+  });
+
+  it('preserves nested viewports and inherited styling with explicit aspect-ratio settings', async () => {
+    const source = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64" fill="#175d8d" preserveAspectRatio="none">'
+      + '<svg x="32" y="16" width="64" height="32" viewBox="0 0 64 32"><circle cx="32" cy="16" r="16"/></svg></svg>';
+    const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><circle cx="64" cy="64" r="16" fill="#175d8d"/></svg>';
+    assert.equal(score(dec(await engine.render(squareIconSvg(source).data, 128)), dec(await engine.render(golden, 128))).pct, 0);
+  });
+
+  it('retains valid XML prologs and self-closing roots across raster and padding wrappers', async () => {
+    for (const body of ['', '<circle cx="64" cy="32" r="16"/>']) {
+      const root = body ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64">${body}</svg>`
+        : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64"/>';
+      const source = '<?xml version="1.0"?><!DOCTYPE svg>' + root;
+      const framed = squareIconSvg(source).data;
+      const padded = nestForMask(framed, 64, 128);
+      const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">'
+        + (body ? '<circle cx="64" cy="64" r="8"/>' : '') + '</svg>';
+      assert.equal(score(dec(await engine.render(padded, 128)), dec(await engine.render(golden, 128))).pct, 0);
+    }
+  });
+
+  it('keeps source-unit percentages correct with explicit mask padding', async () => {
+    const source = readFileSync(new URL('aspect-percent.svg', FIX), 'utf8');
+    const placement = await placeInSafeZone(squareIconSvg(optimiseSvg(source).data).data, engine.renderRgba, 128, 25);
+    const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect x="48" y="56" width="32" height="16" fill="#175d8d"/></svg>';
+    assert.equal(score(dec(await engine.render(placement.svg, 128)), dec(await engine.render(golden, 128))).pct, 0);
+  });
+
+  it('frames tiny coordinate sources consistently with their square counterpart', async () => {
+    const source = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2e-12 1e-12"><circle cx="1e-12" cy="5e-13" r="2.5e-13"/></svg>';
+    // Keep the literal golden in the same tiny units: the renderer itself
+    // approximates sub-micro-unit circle arcs differently from ordinary ones.
+    const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2e-12 2e-12"><circle cx="1e-12" cy="1e-12" r="2.5e-13"/></svg>';
+    assert.equal(score(dec(await engine.render(squareIconSvg(source).data, 128)), dec(await engine.render(golden, 128))).pct, 0);
+  });
+
+  it('retains namespace-scoped references inside the original viewport', async () => {
+    const source = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 64">'
+      + '<defs><circle id="dot" cx="64" cy="32" r="16"/></defs><use xlink:href="#dot" fill="#175d8d"/></svg>';
+    const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><circle cx="64" cy="64" r="16" fill="#175d8d"/></svg>';
+    assert.equal(score(dec(await engine.render(squareIconSvg(source).data, 128)), dec(await engine.render(golden, 128))).pct, 0);
   });
 });
 

@@ -92,7 +92,9 @@ resvg, pngquant and oxipng for its native reference arm.
 16. `--sizes 32` renders twice on purpose: once padded for `icon-32.png`, once unpadded for
     the ICO payload. Under `--bg none` the icon is unpadded too, and the two are the same
     bytes again.
-17. A non-square viewBox warns on stderr.
+17. Non-square raster sources retain their rectangular viewport inside a centered square
+    canvas, including percentage lengths and shifted origins. `icon.svg` keeps its original
+    viewport. ViewBoxes differing by more than 1% warn on stderr; near-square ones remain quiet.
 18. `npm pack` contains only `bin/`, `lib/`, `astro/`, `vite/`, `README.md`, `LICENSE`,
     `CHANGELOG.md`, and `lib/core.mjs` by name, since the package cannot run without it.
 19. A `favseed.config.js`, `.mjs` or `.ts` in the working directory supplies any option; flags win,

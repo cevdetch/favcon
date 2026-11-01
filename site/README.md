@@ -43,6 +43,12 @@ This checks the static base appearance, not every animation frame or display siz
 [current precision report](../bench/precision/README.md) records accuracy, byte/runtime effects
 and the refreshed Vite PWA comparison. PNG quality does not disable SVG validation.
 
+Wide and tall marks retain their proportions in square raster canvases. Raster preparation
+centers the original rectangular SVG viewport, preserving percentage geometry and shifted
+origins. Transparent outputs keep transparent bands; opaque PNGs use the chosen background
+and existing safe-zone placement. The downloadable `icon.svg` keeps its original viewport.
+See the [framing measurements](../bench/framing/README.md); square fixture output is unchanged.
+
 Standard builds skip Zopfli. Extra PNG compression is an explicit opt-in, matching `--zopfli`
 or `zopfli: true` in the CLI/API; release effort uses 120 iterations and fast effort uses 15.
 Both preserve pixels. One optimized `icon.svg` retains animation, styling and accessibility

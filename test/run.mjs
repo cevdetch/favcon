@@ -284,7 +284,8 @@ describe('accuracy', () => {
   });
 
   for (const name of ['general', 'flat', 'second', 'mask', 'heavy', 'animated', 'wide', 'smil', 'tiles',
-    'gradient', 'grid-1', 'grid-16', 'grid-24', 'grid-tiny', 'grid-fallback']) {
+    'gradient', 'grid-1', 'grid-16', 'grid-24', 'grid-tiny', 'grid-fallback',
+    'aspect-wide', 'aspect-tall', 'aspect-offset', 'aspect-percent']) {
     it(`${name}: every raster is inside the bar`, async () => {
       const { out } = await accuracyBuild(name);
       const source = fixture(`${name}.svg`);
@@ -838,7 +839,7 @@ describe('rendering', () => {
     const h = header(readFileSync(join(out, 'icon-32.png')));
     assert.equal(h.width, 32);
     assert.equal(h.height, 32);
-    // logo.svg is the mark, not an icon: it keeps the proportions it was drawn with.
+    // The exported SVG keeps the original viewport; square framing is raster-only.
     assert.ok(!readFileSync(join(out, 'icon.svg'), 'utf8').includes('preserveAspectRatio'));
   });
 

@@ -6,9 +6,10 @@ import { describe, it } from 'node:test';
 import { loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
-import { header } from './lib/png.mjs';
+import { decode, header } from './lib/png.mjs';
 import { score } from './lib/accuracy.mjs';
 import { gridSvg } from './fixtures/small-grid.gen.mjs';
+import { framingCases } from './lib/framing.mjs';
 
 const read = (n) => readFileSync(new URL(`./fixtures/${n}.svg`, import.meta.url), 'utf8');
 const engine = await loadEngine();
@@ -54,6 +55,20 @@ describe('selective SVG precision', () => {
     assert.match(optimiseSvg(read('animated'), { reference: true }).data, /@keyframes/);
     assert.doesNotMatch(optimiseSvg(read('animated'), { reference: true, icon: true }).data, /@keyframes/);
   });
+});
+
+describe('proportions in exported rasters', () => {
+  for (const { mark, golden } of framingCases) {
+    it(`${mark}: transparent PNG and ICO preserve the original shape`, async () => {
+      const set = await run(mark, { bg: 'none', sizes: [32, 128], padding: 0 });
+      for (const file of set.files.filter((file) => /\.(png|ico)$/.test(file.name))) {
+        const actual = decode(Buffer.from(file.name.endsWith('.ico') ? file.bytes.subarray(22) : file.bytes));
+        const expected = decode(Buffer.from(await engine.render(golden, actual.width)));
+        assert.ok(score(actual, expected).pct <= 1, file.name + ' distorts the source');
+      }
+      assert.equal(new TextDecoder().decode(set.files[0].bytes), optimiseSvg(read(mark)).data);
+    });
+  }
 });
 
 describe('buildSet', () => {
