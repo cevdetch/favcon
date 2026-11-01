@@ -11,6 +11,11 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ### Changed
 
+- Preserve wide/tall logo proportions in square PNG/ICO output, including percentage geometry
+  and shifted viewBox origins. Keep the exported SVG viewport and square-input bytes unchanged.
+  Update the non-square warning and source-reference framing; retain existing safe-zone search,
+  quality and opt-in compression. Bump to 0.4.0 for integration cache identity.
+
 - Select SVG precision against the source's static 512px appearance with a 1% error budget.
   Keep compact precision 1 for passing marks; retry higher precision and retain unrounded
   source geometry if no candidate passes. Preserve animation/style/accessibility and use

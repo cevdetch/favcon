@@ -1,4 +1,7 @@
 export const cases = [
+  ...['aspect-wide', 'aspect-tall', 'aspect-offset', 'aspect-percent']
+    .map((mark) => ({ name: `${mark}/proportions`, mark, options: {} })),
+  { name: 'aspect-percent/transparent', mark: 'aspect-percent', options: { bg: 'none', padding: 0, sizes: [32, 128] } },
   ...['grid-1', 'grid-16', 'grid-24', 'grid-tiny', 'grid-fallback'].map((mark) => ({ name: `${mark}/precision`, mark, options: {} })),
   { name: 'gradient/quality100', mark: 'gradient', options: { quality: 100 } },
   { name: 'gradient/quality80', mark: 'gradient', options: { quality: 80 } },

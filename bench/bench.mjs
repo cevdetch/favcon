@@ -21,6 +21,7 @@ import { reference, score } from '../test/lib/accuracy.mjs';
 import { decode } from '../test/lib/png.mjs';
 import { nativeVersions, run } from './native.mjs';
 import { precisionSweep } from './precision.mjs';
+import { framingSweep } from './framing.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(HERE);
@@ -66,6 +67,7 @@ const rawRenders = async () => {
 
 const sweeps = {};
 sweeps.precision = () => precisionSweep(join(OUT, 'precision'));
+sweeps.framing = () => framingSweep(join(OUT, 'framing'));
 
 sweeps.accuracy = async () => {
   const cols = [8, 16, 32, 64, 256];
@@ -455,7 +457,7 @@ const main = async () => {
     process.exit(1);
   }
 
-  const versions = { ...(names.some((name) => name !== 'precision') ? await nativeVersions() : {}), ...engineVersions() };
+  const versions = { ...(names.some((name) => !['precision', 'framing'].includes(name)) ? await nativeVersions() : {}), ...engineVersions() };
 
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
