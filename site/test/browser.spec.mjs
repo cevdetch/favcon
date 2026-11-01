@@ -29,7 +29,7 @@ test('files and metadata match the CLI; archives, cache and page timers work', a
   page.on('pageerror', (error) => errors.push(error.message));
   await checkPage(page);
   const selected = isMobile ? cases.filter((item) =>
-    ['aspect-wide/proportions', 'aspect-tall/proportions', 'aspect-percent/transparent',
+    ['small-mark/placement', 'aspect-wide/proportions', 'aspect-tall/proportions', 'aspect-percent/transparent',
       'grid-1/precision', 'grid-tiny/precision', 'grid-fallback/precision', 'gradient/fast', 'tiles/release', 'gradient/quality60-zopfli', 'transparent-aliases', 'custom-manifest'].includes(item.name)) : cases;
   let fileCount = 0;
   for (const item of selected) {

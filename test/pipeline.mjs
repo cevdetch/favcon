@@ -215,4 +215,16 @@ describe('buildSet', () => {
     assert.deepEqual(actual, expected);
     assert.deepEqual(actual.files[2].bytes, actual.files[3].bytes, '180px alias matches apple');
   });
+
+  it('reuses moderate-margin probes across output sizes', async () => {
+    let calls = 0;
+    await buildSet(read('flat'), opts({ sizes: [192, 512], manifest: true }), {
+      optimiseSvg, engine: { ...engine, renderRgba: (...args) => {
+        calls++; return engine.renderRgba(...args);
+      } },
+    });
+    // The calibrated PR30 build uses59 callbacks, including SVG validation.
+    // Wrapping every oversized probe loses shared180/192px work and needs64.
+    assert.ok(calls <= 59, `${calls} callbacks: shared placement renders were lost`);
+  });
 });

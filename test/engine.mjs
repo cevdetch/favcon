@@ -31,6 +31,41 @@ const pixel = (img, x, y) => [...img.data.subarray((y * img.width + x) * 4, (y *
 const dec = (bytes) => decode(Buffer.from(bytes));
 
 describe('render', () => {
+  it('bounds probes for a small painted mark without shrinking its safe-zone fit', async () => {
+    const requested = [], canvas = 180;
+    const result = await placeInSafeZone(icon('small-mark'), async (svg, px) => {
+      requested.push(px);
+      return engine.renderRgba(svg, px);
+    }, canvas);
+    assert.ok(requested.every((px) => px <= canvas), `oversized probe: ${Math.max(...requested)}`);
+    assert.ok(result.box > 1000, 'the intrinsic viewport still needs enlargement');
+    assert.equal(requested.length, 55, 'the full calibrated candidate walk must remain intact');
+    const { rgba } = await engine.renderRgba(result.svg, canvas);
+    let radius = 0;
+    for (let y = 0; y < canvas; y++) for (let x = 0; x < canvas; x++) {
+      if (!rgba[(y * canvas + x) * 4 + 3]) continue;
+      for (const [a, b] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]])
+        radius = Math.max(radius, Math.hypot(a - canvas / 2, b - canvas / 2));
+    }
+    assert.ok(radius <= canvas * 0.4 + 1.5, 'paint escapes the safe circle');
+    assert.ok(radius >= canvas * 0.4 * 0.9, 'paint no longer fills the safe zone');
+  });
+
+  it('preserves shifted origins, root fill and nested percentages in cropped probes', async () => {
+    const source = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 20 64 64" fill="#175d8d">'
+      + '<svg x="10" y="20" width="64" height="64" viewBox="0 0 64 64">'
+      + '<rect x="43.75%" y="43.75%" width="12.5%" height="12.5%"/></svg></svg>';
+    const requested = [];
+    const result = await placeInSafeZone(source, (svg, px) => {
+      requested.push(px); return engine.renderRgba(svg, px);
+    }, 180);
+    assert.ok(requested.every((px) => px <= 180));
+    // The painted8/64 square snaps to94px centered in180px: [43,137) on both axes.
+    const golden = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">'
+      + '<path fill="#175d8d" d="M43 43h94v94H43z"/></svg>';
+    assert.deepEqual((await engine.renderRgba(result.svg, 180)).rgba, (await engine.renderRgba(golden, 180)).rgba);
+  });
+
   it('overlaps alignment probes while choosing the first crisp size in descending order', async () => {
     let active = 0, peak = 0;
     const requested = [];

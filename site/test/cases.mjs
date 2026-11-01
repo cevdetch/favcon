@@ -1,4 +1,5 @@
 export const cases = [
+  { name: 'small-mark/placement', mark: 'small-mark', options: {} },
   ...['aspect-wide', 'aspect-tall', 'aspect-offset', 'aspect-percent']
     .map((mark) => ({ name: `${mark}/proportions`, mark, options: {} })),
   { name: 'aspect-percent/transparent', mark: 'aspect-percent', options: { bg: 'none', padding: 0, sizes: [32, 128] } },

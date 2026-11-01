@@ -55,7 +55,12 @@ Both preserve pixels. One optimized `icon.svg` retains animation, styling and ac
 and is reused by the site's header and favicon. Raster exports use a static base appearance.
 
 Placement searches and raster outputs run in bounded batches, with serial fallback for large
-custom sizes. Builds run in a dedicated worker; Cancel terminates it and its children. Previous
+custom sizes. When a fitted viewport exceeds twice the target size, placement probes render
+centered on the target canvas. Moderate probes stay reusable across output sizes; no probe
+canvas exceeds twice its target. The complete candidate walk and fitted geometry remain;
+the bound applies per probe, not to probe count or process RAM. See the
+[placement measurements](../bench/placement/README.md).
+Builds run in a dedicated worker; Cancel terminates it and its children. Previous
 successful downloads remain usable after a failed or cancelled build. One completed set is
 cached in memory with owned copies and a 16 MiB budget; no source/result is persisted or uploaded.
 

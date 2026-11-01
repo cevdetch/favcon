@@ -23,6 +23,7 @@ import { nativeVersions, run } from './native.mjs';
 import { precisionSweep } from './precision.mjs';
 import { framingSweep } from './framing.mjs';
 import { icoSizeSweep } from './ico-size.mjs';
+import { placementSweep } from './placement.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(HERE);
@@ -70,6 +71,7 @@ const sweeps = {};
 sweeps.precision = () => precisionSweep(join(OUT, 'precision'));
 sweeps.framing = () => framingSweep(join(OUT, 'framing'));
 sweeps['ico-size'] = () => icoSizeSweep(join(OUT, 'ico-size'));
+sweeps.placement = () => placementSweep(join(OUT, 'placement'));
 
 sweeps.accuracy = async () => {
   const cols = [8, 16, 32, 64, 256];
@@ -459,7 +461,7 @@ const main = async () => {
     process.exit(1);
   }
 
-  const versions = { ...(names.some((name) => !['precision', 'framing', 'ico-size'].includes(name)) ? await nativeVersions() : {}), ...engineVersions() };
+  const versions = { ...(names.some((name) => !['precision', 'framing', 'ico-size', 'placement'].includes(name)) ? await nativeVersions() : {}), ...engineVersions() };
 
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
