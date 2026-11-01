@@ -11,15 +11,17 @@
 
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
-import { build, FavseedError, icoWrap, optimiseSvg } from '../bin/favseed.mjs';
+import { build, engineVersions, FavseedError, icoWrap, optimiseSvg } from '../bin/favseed.mjs';
 import favseedAstro from '../astro/index.mjs';
+import { cacheKey } from '../vite/cache.mjs';
 import { reference, score, THRESHOLD_PCT } from './lib/accuracy.mjs';
 import { decode, encode, header } from './lib/png.mjs';
 
@@ -1057,6 +1059,170 @@ describe('the astro integration', () => {
       .find((p) => p.name === 'favseed:virtual');
     return plugin.load('\0virtual:favseed');
   };
+
+  const project = async (options = {}, root = freshDir()) => {
+    mkdirSync(root, { recursive: true });
+    copyFileSync(fixture('flat.svg'), join(root, 'logo.svg'));
+    const s = stub(root), integration = favseedAstro({ input: 'logo.svg', ...options });
+    await integration.hooks['astro:config:setup']({ command: 'build', ...s.args });
+    return { root, pub: join(root, 'public'), stamp: join(root, 'node_modules/.cache/favseed/written.json'),
+      logs: s.calls.logs,
+      build: () => integration.hooks['astro:build:start']({ logger: s.args.logger }),
+      dev: () => integration.hooks['astro:server:setup']({ logger: s.args.logger }) };
+  };
+
+  it('removes owned development assets before publishing the production set', async () => {
+    const p = await project();
+    await p.dev();
+    assert.ok(existsSync(join(p.pub, 'icon-256.png')));
+    await p.build();
+    assert.deepEqual(readdirSync(p.pub).sort(),
+      ['apple-touch-icon.png', 'favicon.ico', 'icon-192.png', 'icon-512.png', 'icon.svg']);
+    assert.ok(!('icon-256.png' in JSON.parse(readFileSync(p.stamp, 'utf8'))));
+  });
+
+  it('removes discontinued sizes and manifest on cache hits and allows their reintroduction', async () => {
+    const first = await project({ sizes: [32], manifest: true });
+    await first.build();
+    const second = await project({ sizes: [64] }, first.root);
+    await second.build();
+    assert.ok(!existsSync(join(second.pub, 'icon-32.png')));
+    assert.ok(!existsSync(join(second.pub, 'site.webmanifest')));
+    await first.build();
+    assert.ok(first.logs.some(([, m]) => m.startsWith('cache hit')));
+    assert.ok(existsSync(join(first.pub, 'icon-32.png')));
+    assert.ok(existsSync(join(first.pub, 'site.webmanifest')));
+    assert.ok(!existsSync(join(first.pub, 'icon-64.png')));
+    second.logs.length = 0;
+    await second.build();
+    assert.ok(second.logs.some(([, m]) => m.startsWith('cache hit')));
+    assert.deepEqual(readdirSync(second.pub).sort(),
+      ['apple-touch-icon.png', 'favicon.ico', 'icon-64.png', 'icon.svg']);
+  });
+
+  it('cleans owned legacy assets while preserving edited and unrelated files', async () => {
+    const first = await project({ sizes: [32], manifest: true });
+    await first.build();
+    writeFileSync(join(first.pub, 'icon-32.png'), 'edited icon');
+    writeFileSync(join(first.pub, 'icon-999.png'), 'unowned icon');
+    writeFileSync(join(first.pub, 'notes.txt'), 'user notes');
+    const legacy = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
+    writeFileSync(join(first.pub, 'logo.svg'), legacy);
+    const stamp = JSON.parse(readFileSync(first.stamp, 'utf8'));
+    stamp['logo.svg'] = createHash('sha256').update(legacy).digest('hex');
+    writeFileSync(first.stamp, JSON.stringify(stamp));
+    rmSync(join(first.pub, 'site.webmanifest')); // A previously owned file may already be gone.
+    const second = await project({ sizes: [64] }, first.root);
+    await second.build();
+    assert.equal(readFileSync(join(second.pub, 'icon-32.png'), 'utf8'), 'edited icon');
+    assert.equal(readFileSync(join(second.pub, 'icon-999.png'), 'utf8'), 'unowned icon');
+    assert.equal(readFileSync(join(second.pub, 'notes.txt'), 'utf8'), 'user notes');
+    assert.ok(!existsSync(join(second.pub, 'logo.svg')));
+    assert.ok(!existsSync(join(second.pub, 'site.webmanifest')));
+    assert.ok(!('icon-32.png' in JSON.parse(readFileSync(second.stamp, 'utf8'))));
+    assert.ok(second.logs.some(([level, m]) => level === 'warn' && m.includes('icon-32.png')));
+  });
+
+  it('never reclaims an edited orphan when its size is reintroduced and removed again', async () => {
+    const first = await project({ sizes: [32] });
+    await first.build();
+    const edited = join(first.pub, 'icon-32.png');
+    writeFileSync(edited, 'user-edited icon');
+    const second = await project({ sizes: [64] }, first.root);
+    await second.build();
+    assert.ok(!('icon-32.png' in JSON.parse(readFileSync(second.stamp, 'utf8'))));
+    await assert.rejects(first.build(), /public\/icon-32\.png already exists/);
+    await second.build();
+    assert.equal(readFileSync(edited, 'utf8'), 'user-edited icon');
+    assert.ok(!('icon-32.png' in JSON.parse(readFileSync(second.stamp, 'utf8'))));
+  });
+
+  it('does not reclaim an edited orphan from a legacy hardlinked cache entry', async () => {
+    const first = await project({ sizes: [32] });
+    await first.build();
+    const cache = join(first.root, 'node_modules/.cache/favseed');
+    const legacy = join(cache, cacheKey({ version: '0.5.0', source: readFileSync(join(first.root, 'logo.svg')),
+      options: { sizes: [32], base: '/' }, engine: engineVersions() }));
+    const files = ['icon.svg', 'favicon.ico', 'apple-touch-icon.png', 'icon-32.png'];
+    const original = files.map((name) => [name, readFileSync(join(first.pub, name))]);
+    mkdirSync(legacy, { recursive: true });
+    for (const [name, bytes] of original) writeFileSync(join(legacy, name), bytes);
+    writeFileSync(join(legacy, 'index.json'), JSON.stringify({ files }));
+    // A 0.5.0 public edit could also alter this old cache's shared inode.
+    writeFileSync(join(legacy, 'icon-32.png'), 'legacy user edit');
+    const edited = join(first.pub, 'icon-32.png');
+    writeFileSync(edited, 'legacy user edit');
+    const second = await project({ sizes: [64] }, first.root);
+    await second.build();
+    await assert.rejects(first.build(), /public\/icon-32\.png already exists/);
+    await second.build();
+    assert.equal(readFileSync(edited, 'utf8'), 'legacy user edit');
+    assert.ok(!('icon-32.png' in JSON.parse(readFileSync(second.stamp, 'utf8'))));
+  });
+
+  it('leaves previous assets and ownership intact when a new asset conflicts', async () => {
+    const first = await project({ sizes: [32], manifest: true });
+    await first.build();
+    writeFileSync(join(first.pub, 'icon-64.png'), 'hand-tuned icon');
+    const before = readdirSync(first.pub).sort().map((name) => [name, readFileSync(join(first.pub, name))]);
+    const stamp = readFileSync(first.stamp);
+    const second = await project({ sizes: [64] }, first.root);
+    await assert.rejects(second.build(), /public\/icon-64\.png already exists/);
+    assert.deepEqual(readdirSync(second.pub).sort().map((name) => [name, readFileSync(join(second.pub, name))]), before);
+    assert.deepEqual(readFileSync(second.stamp), stamp);
+  });
+
+  it('does not claim stale assets when the ownership stamp is absent or malformed', async () => {
+    for (const text of [undefined, '{broken', 'null', '[]', '42', '"invalid"']) {
+      const first = await project({ sizes: [32], manifest: true });
+      await first.build();
+      if (text === undefined) rmSync(first.stamp);
+      else writeFileSync(first.stamp, text);
+      const second = await project({ sizes: [64] }, first.root);
+      await second.build();
+      assert.ok(existsSync(join(second.pub, 'icon-32.png')), String(text));
+      assert.ok(existsSync(join(second.pub, 'site.webmanifest')), String(text));
+      assert.ok(!('icon-32.png' in JSON.parse(readFileSync(second.stamp, 'utf8'))));
+    }
+  });
+
+  it('ignores hostile stamp paths, unrelated names and generated-name directories', async () => {
+    const first = await project({ sizes: [32] });
+    await first.build();
+    const outside = join(first.root, 'outside.txt'), notes = join(first.pub, 'notes.txt');
+    writeFileSync(outside, 'outside'); writeFileSync(notes, 'notes');
+    mkdirSync(join(first.pub, 'logo.svg'));
+    writeFileSync(join(first.pub, 'logo.svg', 'keep.txt'), 'directory content');
+    const stamp = JSON.parse(readFileSync(first.stamp, 'utf8'));
+    const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
+    Object.assign(stamp, { '../outside.txt': digest(outside), [outside]: digest(outside),
+      'notes.txt': digest(notes), 'logo.svg': digest(notes) });
+    writeFileSync(first.stamp, JSON.stringify(stamp));
+    const second = await project({ sizes: [64] }, first.root);
+    await second.build();
+    assert.equal(readFileSync(outside, 'utf8'), 'outside');
+    assert.equal(readFileSync(notes, 'utf8'), 'notes');
+    assert.equal(readFileSync(join(second.pub, 'logo.svg', 'keep.txt'), 'utf8'), 'directory content');
+    assert.ok(!existsSync(join(second.pub, 'icon-32.png')));
+  });
+
+  it('preserves a discontinued asset replaced by a symlink even when target bytes match', async (t) => {
+    const first = await project({ sizes: [32] });
+    await first.build();
+    const stale = join(first.pub, 'icon-32.png'), outside = join(first.root, 'outside.png');
+    const bytes = readFileSync(stale);
+    writeFileSync(outside, bytes); rmSync(stale);
+    try { symlinkSync(outside, stale, 'file'); }
+    catch (error) {
+      if (process.platform !== 'win32' || error.code !== 'EPERM') throw error;
+      t.skip('Creating file symlinks requires Windows privileges'); return;
+    }
+    const second = await project({ sizes: [64] }, first.root);
+    await second.build();
+    assert.ok(lstatSync(stale).isSymbolicLink());
+    assert.deepEqual(readFileSync(outside), bytes);
+    assert.ok(!('icon-32.png' in JSON.parse(readFileSync(second.stamp, 'utf8'))));
+  });
 
   it('bails immediately on sync and on preview', async () => {
     for (const command of ['sync', 'preview']) {

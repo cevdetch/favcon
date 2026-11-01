@@ -14,7 +14,7 @@
 //     in vite/cache.mjs, which every host shares.
 
 import { createHash } from 'node:crypto';
-import { copyFile, link, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +30,10 @@ const exists = async (p) => { try { await stat(p); return true; } catch { return
 /** `/` and `/blog/` both come out as a prefix ending in a single slash. */
 const basePrefix = (base) => (base && base !== '/' ? `/${base.replace(/^\/+|\/+$/g, '')}/` : '/');
 
+// Include the former logo.svg output so its existing ownership stamp can retire it.
+const generatedAsset = (name) => ['icon.svg', 'logo.svg', 'favicon.ico', 'apple-touch-icon.png', 'site.webmanifest'].includes(name)
+  || /^icon-[1-9]\d*\.png$/.test(name);
+
 /**
  * Copy a finished set into public/, refusing to clobber anything the integration did not
  * write itself. Overwriting a hand-tuned favicon.ico without a word is the worst possible
@@ -37,7 +41,10 @@ const basePrefix = (base) => (base && base !== '/' ? `/${base.replace(/^\/+|\/+$
  */
 const publish = async ({ from, files, publicDir, stampPath, logger }) => {
   let stamp = {};
-  try { stamp = JSON.parse(await readFile(stampPath, 'utf8')); } catch { /* first run */ }
+  try {
+    const value = JSON.parse(await readFile(stampPath, 'utf8'));
+    if (value && typeof value === 'object' && !Array.isArray(value)) stamp = value;
+  } catch { /* Missing or unreadable ownership metadata grants no ownership. */ }
 
   for (const f of files) {
     const target = join(publicDir, f);
@@ -62,13 +69,25 @@ const publish = async ({ from, files, publicDir, stampPath, logger }) => {
   for (const f of files) {
     const src = join(from, f), dst = join(publicDir, f);
     await rm(dst, { force: true });
-    // A hardlink is free; it fails across filesystems and on some Windows volumes, and the
-    // copy is the answer there. Neither is observable from the page. The link does share an
-    // inode with the cache entry, which only matters if something rewrites a file in public/
-    // IN PLACE rather than replacing it, and the check above would then refuse to publish
-    // over it anyway, which is the behaviour wanted.
-    try { await link(src, dst); } catch { await copyFile(src, dst); }
+    // Public edits must not mutate cached bytes. Otherwise reintroducing an edited
+    // orphan can adopt those mutated bytes as generated, then delete the user's file.
+    await copyFile(src, dst);
     next[f] = sha256(await readFile(dst));
+  }
+
+  // Use actual directory entries, never stamp keys as paths. Only unchanged regular
+  // generated files are ours to remove; user replacements and symlinks stay intact.
+  const active = new Set(files);
+  for (const entry of await readdir(publicDir, { withFileTypes: true })) {
+    const name = entry.name;
+    if (active.has(name) || !generatedAsset(name) || !entry.isFile()
+        || !Object.hasOwn(stamp, name) || typeof stamp[name] !== 'string' || !/^[a-f0-9]{64}$/.test(stamp[name])) continue;
+    const target = join(publicDir, name);
+    let bytes;
+    try { bytes = await readFile(target); }
+    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+    if (sha256(bytes) === stamp[name]) await rm(target, { force: true });
+    else logger?.warn(`kept public/${name}: it changed since favseed wrote it`);
   }
   await mkdir(dirname(stampPath), { recursive: true });
   await writeFile(stampPath, JSON.stringify(next, null, 2));

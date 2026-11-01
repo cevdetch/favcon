@@ -362,8 +362,8 @@ favseed({
 heuristic: keyed on favseed's version, the input bytes, the canonicalised options **and the
 versions of `@napi-rs/image` and Zopfli (including the WASM build hash)**. That last part is what makes it correct:
 both change their output across releases, so a cache keyed only on the SVG would hand back
-stale files after an upgrade, with no sign of it. A hit hardlinks into `public/` in
-single-digit milliseconds.
+stale files after an upgrade, with no sign of it. A hit copies cached files into `public/`.
+Published files are independent copies, so editing them cannot change cached output.
 
 For a cold first run, `dev: 'fast'` (the default) builds one 256 px size. With Zopfli opted in,
 it uses 15 iterations; otherwise it skips extra compression. `dev: 'full'` generates the
@@ -379,6 +379,12 @@ middleware that splices before `</head>` and skips any page that already has a
 favseed **will not overwrite a `public/favicon.ico` it did not write itself.** Clobbering a
 hand-tuned ICO without a word is the worst possible first impression, so the check is on
 content: delete or move the file, and favseed writes its own.
+
+Changing sizes, disabling the manifest or switching from development to production removes
+discontinued generated files before Astro copies `public/` into its output. This also works
+on cache hits. Favseed removes only regular files whose bytes match its previous ownership
+record; it preserves edited files, symlinks and unrelated assets. Files with no ownership
+record, including older leftovers whose record is already lost, need manual cleanup.
 
 ## How it decides
 

@@ -1,6 +1,6 @@
 {
   "name": "favseed",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "One SVG in, an optimised favicon set out.",
   "type": "module",
   "license": "MIT",
