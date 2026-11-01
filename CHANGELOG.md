@@ -9,6 +9,17 @@ minor at minimum, never patch.** Downstream users diff these files into git.
 
 ## [Unreleased]
 
+### Fixed
+
+- Remove discontinued Astro-generated sizes, manifests and owned legacy SVGs from `public/`,
+  including on cache hits and development-to-production transitions. Delete only unchanged
+  regular files recorded as owned; preserve edited files, symlinks and unrelated assets.
+  Keep the previous set intact when an incoming asset conflicts. Unstamped leftovers still
+  require manual cleanup.
+- Publish independent Astro asset copies so public edits cannot alter cached output and
+  later be reclaimed and deleted. Bump to 0.5.1 to invalidate previously hardlinked caches;
+  generated image bytes remain unchanged.
+
 ### Changed
 
 - Use one 48×48 PNG-backed ICO fallback and matching link metadata across CLI, browser,
