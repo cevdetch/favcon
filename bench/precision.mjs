@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { optimize, builtinPlugins } from 'svgo';
 import { engineVersions, loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
-import { squareIconSvg } from '../lib/core.mjs';
+import { ICO_SIZE, squareIconSvg } from '../lib/core.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { reference, score } from '../test/lib/accuracy.mjs';
 import { decode } from '../test/lib/png.mjs';
@@ -49,8 +49,8 @@ export async function precisionSweep(out) {
     sources.set(mark, source);
     const rgba = await engine.renderRgba(squareIconSvg(resolveVars(source, {})).data, 512);
     refs.set(mark + '/svg', { width: rgba.width, height: rgba.height, data: rgba.rgba });
-    for (const px of [32, 180, 192, 512]) refs.set(mark + '/' + px, await reference({ source: file, px,
-      bg: px === 32 ? null : '#000000', vars: {}, fitted: px !== 32 }));
+    for (const px of new Set([32, ICO_SIZE, 180, 192, 512])) refs.set(mark + '/' + px, await reference({ source: file, px,
+      bg: px === 32 || px === ICO_SIZE ? null : '#000000', vars: {}, fitted: px !== 32 && px !== ICO_SIZE }));
   }
 
   const rows = [], stable = new Map();
@@ -117,7 +117,9 @@ export async function precisionSweep(out) {
     currentHashes: Object.fromEntries(['core.mjs', 'config.mjs', 'pipeline.mjs', 'engine.mjs', 'svg-precision.mjs']
       .map((name) => [name, hash(readFileSync(join(ROOT, 'lib', name)))])),
     sourceHashes: Object.fromEntries([...sources].map(([name, svg]) => [name, hash(svg)])),
-    repetitions: 3, arms, svgErrorBudget: '1% at512px; threshold8/255 on black and white composites',
+    repetitions: 3, arms, icoSizes: { before: 32, current: ICO_SIZE },
+    comparisonScope: 'Whole pipelines: current also includes subsequent framing and ICO-size changes; not an isolated precision effect.',
+    svgErrorBudget: '1% at512px; threshold8/255 on black and white composites',
     note: 'Rotated/reversed full in-memory builds; warmup repetition0 excluded from median totals. Imports, input reads, independent grading references, output writes and post-build grading excluded; runtime reference preparation and SVG validation included. No Zopfli. Original11 is the prior corpus; common14 adds small grids; grid-tiny has no successful old build and is excluded from timing/byte comparisons. PNG source error includes placement/quantization; ICO separately reported. Native-only timing, not a browser runtime claim.' }, summaries, rows };
   writeFileSync(join(out, 'results.json'), JSON.stringify(data, null, 2) + '\n');
   return { title: 'Selective SVG precision: source accuracy, output bytes and full-build overhead',

@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { engineVersions, icoWrap, loadEngine, optimiseSvg } from '../bin/favseed.mjs';
 import { normaliseOptions } from '../lib/config.mjs';
-import { DEFAULT_QUALITY } from '../lib/core.mjs';
+import { DEFAULT_QUALITY, ICO_SIZE } from '../lib/core.mjs';
 import { buildSet } from '../lib/pipeline.mjs';
 import { decode } from '../test/lib/png.mjs';
 import { score } from '../test/lib/accuracy.mjs';
@@ -79,9 +79,9 @@ const metadata = { node: process.version, cpu: cpus()[0]?.model, cores: cpus().l
   sourceSha256: Object.fromEntries(['lib/core.mjs', 'lib/config.mjs', 'lib/engine.mjs', 'lib/pipeline.mjs', 'lib/svg-precision.mjs'].map((name) => [name, hash(readFileSync(new URL('../' + name, import.meta.url)))])),
   inputSha256: Object.fromEntries(samples.map((sample) => [sample.id, hash(sample.raw)])),
   favseedQuality: 100, // Explicit colors256 path; independent of the public default.
-  favseedDefaultQuality: DEFAULT_QUALITY, // favseed-default uses the current public default and skips Zopfli.
+  icoSize: ICO_SIZE, favseedDefaultQuality: DEFAULT_QUALITY, // favseed-default uses the current public default and skips Zopfli.
   arms: arms.map((arm) => arm.name), lowEffort, qualityLevels, repetitions: 2, options: defaultPngCompressionOptions,
-  note: 'Encoding only on fixed already-placed pixels, no SVG/raster/placement/file-count difference. Vite API with padding0/identity resize. Pixel error is vs raw rendered pixels, not original SVG. 32px ICO is reported separately from the default 1% accuracy gate.' };
+  note: `Encoding only on fixed already-placed pixels, no SVG/raster/placement/file-count difference. Vite API with padding0/identity resize. Pixel error is vs raw rendered pixels, not original SVG. ${ICO_SIZE}px ICO is reported separately from the default 1% accuracy gate.` };
 writeFileSync(join(out, 'metadata.json'), JSON.stringify(metadata, null, 2) + '\n');
 for (const { id, raw } of samples) writeFileSync(join(out, 'inputs', `${id}.png`), raw);
 const warm = samples.find((s) => s.id === 'general-512');
@@ -104,10 +104,10 @@ for (let rep = 0; rep < 2; rep++) for (const [index, sample] of samples.entries(
 }
 const summaries = arms.map(({ name }) => {
   const selected = rows.filter((r) => r.arm === name), first = selected.filter((r) => r.rep === 0);
-  const gated = first.filter((r) => r.px !== 32);
+  const gated = first.filter((r) => r.px !== ICO_SIZE);
   return { arm: name, bytes: first.reduce((n, r) => n + r.bytes, 0),
     medianMs: median([0, 1].map((rep) => selected.filter((r) => r.rep === rep).reduce((n, r) => n + r.ms, 0))),
-    worstPct: Math.max(...gated.map((r) => r.pct)), worstIcoPct: Math.max(...first.filter((r) => r.px === 32).map((r) => r.pct)),
+    worstPct: Math.max(...gated.map((r) => r.pct)), worstIcoPct: Math.max(...first.filter((r) => r.px === ICO_SIZE).map((r) => r.pct)),
     overOnePercent: gated.filter((r) => r.pct > 1).map(({ id, pct }) => ({ id, pct })) };
 });
 writeFileSync(join(out, 'summary.json'), JSON.stringify({ metadata, summaries, rows }, null, 2) + '\n');
@@ -119,18 +119,18 @@ const matchedRows = [];
 for (const row of rows.filter((item) => item.rep === 0)) {
   const png = readFileSync(join(out, 'outputs', `${row.id}-${row.arm}.png`));
   let bytes = png;
-  if (row.px === 32) {
+  if (row.px === ICO_SIZE) {
     // Vite re-encodes before wrapping. Verify that this changes no decoded pixels.
-    bytes = Buffer.from(row.arm.startsWith('vite-') ? await generateFavicon('png', png) : icoWrap(png, 32));
+    bytes = Buffer.from(row.arm.startsWith('vite-') ? await generateFavicon('png', png) : icoWrap(png, ICO_SIZE));
     assert.equal(bytes.readUInt16LE(2), 1);
     assert.equal(bytes.readUInt16LE(4), 1);
-    assert.equal(bytes[6], 32);
-    assert.equal(bytes[7], 32);
+    assert.equal(bytes[6], ICO_SIZE);
+    assert.equal(bytes[7], ICO_SIZE);
     const offset = bytes.readUInt32LE(18), length = bytes.readUInt32LE(14);
     assert.deepEqual(decode(bytes.subarray(offset, offset + length)), decode(png), 'ICO repacking changed pixels');
   }
   const [mark] = row.id.split('-');
-  const name = row.px === 32 ? 'favicon.ico' : row.px === 180 ? 'apple-touch-icon.png' : `icon-${row.px}.png`;
+  const name = row.px === ICO_SIZE ? 'favicon.ico' : row.px === 180 ? 'apple-touch-icon.png' : `icon-${row.px}.png`;
   const dir = join(out, 'matched-files', row.arm, mark);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, name), bytes);
@@ -144,7 +144,7 @@ const matchedSummaries = arms.map(({ name: arm }) => {
       selected.filter((row) => row.mark === mark).reduce((sum, row) => sum + row.bytes, 0)])) };
 });
 writeFileSync(join(out, 'matched-summary.json'), JSON.stringify({
-  note: '16 matched raster files:32px ICO plus180/192/512px PNG for each of4fixtures. Same raw pixels, dimensions, backgrounds and placement. Real Vite generateFavicon route; Favseed ICO wrapper. SVG/manifest excluded. ICO pixels verified unchanged after repacking.',
+  note: `16 matched raster files:${ICO_SIZE}px ICO plus180/192/512px PNG for each of4fixtures. Same raw pixels, dimensions, backgrounds and placement. Real Vite generateFavicon route; Favseed ICO wrapper. SVG/manifest excluded. ICO pixels verified unchanged after repacking.`,
   summaries: matchedSummaries, rows: matchedRows,
 }, null, 2) + '\n');
 console.log(JSON.stringify(matchedSummaries, null, 2));

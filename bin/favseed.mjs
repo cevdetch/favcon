@@ -4,7 +4,7 @@
 //
 //   icon.svg              the optimised mark, animation and styling intact
 //                         Every raster below is rendered from this file.
-//   favicon.ico           32px PNG wrapped in a 22-byte ICO container
+//   favicon.ico           48px PNG wrapped in a 22-byte ICO container
 //   apple-touch-icon.png  180px on an opaque ground, the mark placed in the safe zone: iOS
 //   icon-<size>.png       one padded set on the same ground, the mark placed in the safe zone:
 //                         the manifest's "any maskable" icons. --bg none keeps them
@@ -27,8 +27,8 @@
 //     keep the geometry in that rest frame, including for reduced-motion viewers.
 //   * resvg does NOT stretch to fill when given both -w and -h. It preserves the aspect
 //     ratio and derives the second dimension, so a 128x64 mark rendered at -w 32 -h 32
-//     comes out 32x16. Making the box authoritative takes a square intrinsic size AND
-//     preserveAspectRatio="none"; see squareIconSvg in lib/core.mjs.
+//     comes out 32x16. Center the original viewport in a square raster canvas;
+//     see squareIconSvg in lib/core.mjs.
 //   * The masked icons are placed by measurement, not by a padding percentage. The safe zone
 //     is a circle of radius 40% of the icon, and what has to sit inside it is the mark's
 //     opaque extent, not its viewBox, because most marks carry a margin of their own. So

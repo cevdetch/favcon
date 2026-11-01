@@ -201,7 +201,7 @@ describe('the CLI with a config file', () => {
     const dir = project({ 'favseed.config.mjs': `export default { ${FAST}, base: 'blog' };` });
     const r = await run(dir, ['--html', '--manifest']);
     assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stdout, /<link rel="icon" href="\/blog\/favicon\.ico" sizes="32x32">/);
+    assert.match(r.stdout, /<link rel="icon" href="\/blog\/favicon\.ico" sizes="48x48">/);
     assert.match(r.stdout, /<link rel="manifest" href="\/blog\/site\.webmanifest">/);
     assert.equal(JSON.parse(read(dir, 'site.webmanifest')).icons[0].src, '/blog/icon-32.png');
   });

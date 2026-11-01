@@ -1,5 +1,9 @@
 # Selective SVG precision — 31 October 2026
 
+These recorded measurements use the historical 32px ICO. Current builds use 48px;
+see the [ICO report](../ico-size/README.md). The runnable sweep compares its immutable
+baseline with the current whole pipeline, including later changes.
+
 These measurements predate the centered non-square raster viewport. See the
 [framing report](../framing/README.md) for that later change. The matched Vite inputs
 here are square sources and retain the same output bytes.

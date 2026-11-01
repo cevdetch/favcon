@@ -64,6 +64,11 @@ Opt-in compression includes the guarded lossless palette pass described in the
 the default-off compression and single-SVG output change. Current measurements are in
 [the default-performance report](../bench/zopfli/DEFAULTS.md).
 
+The ICO fallback has one 48×48 PNG entry. Generated links declare `sizes="48x48"`;
+explicit 32px PNG requests stay 32px. Transparent 48px exports share the ICO payload,
+while padded 48px PNGs remain separate. See the [ICO measurements](../bench/ico-size/README.md)
+for the size and accuracy tradeoff; other file bytes are unchanged.
+
 ## Loading and hosting requirements
 
 The image WASM asset is 10,322,976 bytes before transfer compression; production serves it

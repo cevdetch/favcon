@@ -72,6 +72,35 @@ describe('proportions in exported rasters', () => {
 });
 
 describe('buildSet', () => {
+  it('shares an unpadded48px PNG with the ICO while preserving an explicit32px PNG', async () => {
+    const renderedSizes = [];
+    const set = await buildSet(read('general'), opts({ bg: 'none', sizes: [32, 48], padding: 0 }), {
+      optimiseSvg, engine: { ...engine, render: async (...args) => {
+        renderedSizes.push(args[1]); return engine.render(...args);
+      } },
+    });
+    const file = (name) => set.files.find((f) => f.name === name).bytes;
+    const ico = file('favicon.ico'), png32 = file('icon-32.png');
+    assert.deepEqual([...ico.subarray(6, 8)], [48, 48]);
+    assert.deepEqual(file('icon-48.png'), ico.subarray(22));
+    assert.deepEqual([header(Buffer.from(png32)).width, header(Buffer.from(png32)).height], [32, 32]);
+    assert.deepEqual(renderedSizes.toSorted((a, b) => a - b), [32, 48, 180]);
+  });
+
+  it('renders padded48px output separately from the unpadded48px ICO', async () => {
+    const renderedSizes = [];
+    const set = await buildSet(read('general'), opts({ sizes: [48], padding: 20 }), {
+      optimiseSvg, engine: { ...engine, render: async (...args) => {
+        renderedSizes.push(args[1]); return engine.render(...args);
+      } },
+    });
+    const ico = set.files.find((f) => f.name === 'favicon.ico').bytes;
+    const png = set.files.find((f) => f.name === 'icon-48.png').bytes;
+    assert.deepEqual([...ico.subarray(6, 8)], [48, 48]);
+    assert.notDeepEqual(png, ico.subarray(22));
+    assert.equal(renderedSizes.filter((size) => size === 48).length, 2);
+  });
+
   it('returns the set in the CLI order, as bytes', async () => {
     const set = await run('general', { manifest: true });
     assert.deepEqual(set.files.map((f) => f.name),
@@ -165,7 +194,7 @@ describe('buildSet', () => {
     };
     await assert.rejects(buildSet(read('tiles'), opts({ sizes: [192, 512], padding: 20 }),
       { engine: failing, optimiseSvg }), /raster failed/);
-    assert.deepEqual(finished.sort((a, b) => a - b), [32, 192, 512]);
+    assert.deepEqual(finished.sort((a, b) => a - b), [48, 192, 512]);
   });
 
   it('reuses transparent placement renders and reports completed raster jobs', async () => {

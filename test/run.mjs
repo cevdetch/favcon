@@ -84,13 +84,13 @@ describe('the output set', () => {
     }
   });
 
-  it('reports a single 32x32 entry in the ICO', async () => {
+  it('reports a single 48x48 entry in the ICO', async () => {
     const { out } = await DEFAULT_BUILD();
     const ico = readFileSync(join(out, 'favicon.ico'));
     assert.equal(ico.readUInt16LE(4), 1, 'idCount');
-    assert.equal(ico[6], 32, 'bWidth');
-    assert.equal(ico[7], 32, 'bHeight');
-    assert.equal(header(ico.subarray(22)).width, 32, 'payload width');
+    assert.equal(ico[6], 48, 'bWidth');
+    assert.equal(ico[7], 48, 'bHeight');
+    assert.deepEqual([header(ico.subarray(22)).width, header(ico.subarray(22)).height], [48, 48], 'payload dimensions');
   });
 
   it('gives apple-touch-icon.png no alpha channel when --bg is set', async () => {
@@ -365,11 +365,11 @@ describe('optional outputs and option syntax', () => {
     assert.deepEqual(m.icons.map((i) => i.sizes), ['32x32']);
   });
 
-  it('--html prints the link set with sizes="32x32" on the ICO', async () => {
+  it('--html prints the link set with sizes="48x48" on the ICO', async () => {
     const out = freshDir();
     const r = await cli(['--bg', '#fff', '--html', '--sizes', '32', '-o', out, fixture('flat.svg')]);
     assert.equal(r.code, 0, r.stderr);
-    assert.match(r.stdout, /<link rel="icon" href="\/favicon\.ico" sizes="32x32">/);
+    assert.match(r.stdout, /<link rel="icon" href="\/favicon\.ico" sizes="48x48">/);
     assert.match(r.stdout, /<link rel="icon" href="\/icon\.svg" type="image\/svg\+xml">/);
     assert.match(r.stdout, /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png">/);
     // logo.svg appears in the size summary; what matters is that nothing LINKS to it.
@@ -474,7 +474,7 @@ describe('the masked icons', () => {
       return set.size;
     };
     // The padded icon against the unpadded ICO payload: the same mark, one snapped
-    // to whole pixels at 512 and one rendered at its native 32.
+    // to whole pixels at 512 and one rendered at its native 48.
     const masked = colours(readFileSync(join(out, 'icon-512.png')), false),
           source = colours(readFileSync(join(out, 'favicon.ico')).subarray(22), true);
     assert.ok(masked <= source + 1, `${masked} colours: the snapped icon still carries edge blends`);
@@ -528,7 +528,7 @@ describe('the masked icons', () => {
 
   it('leaves icon.svg and the ICO payload unpadded', async () => {
     // These two are never masked: the SVG favicon is drawn in a browser tab and the ICO is
-    // 32px of tab furniture. Padding them would shrink the mark for nothing.
+    // an unpadded fallback. Padding them would shrink the mark for nothing.
     const out = freshDir();
     await build({ input: fixture('tiles.svg'), out, sizes: [32], zopfli: false });
     const icon32 = readFileSync(join(out, 'icon-32.png'));
@@ -565,10 +565,12 @@ describe('the masked icons', () => {
     const m = JSON.parse(readFileSync(join(out, 'site.webmanifest'), 'utf8'));
     assert.deepEqual(m.icons.map((i) => [i.src, i.sizes, i.purpose]),
       [['/icon-32.png', '32x32', undefined]]);
-    // Unpadded, icon-32.png is the native render again: the ICO payload's twin, as before.
-    assert.deepEqual([...readFileSync(join(out, 'icon-32.png'))],
+    // A requested32px PNG keeps its size independently of the48px ICO default.
+    assert.deepEqual([header(readFileSync(join(out, 'icon-32.png'))).width,
+      header(readFileSync(join(out, 'icon-32.png'))).height], [32, 32]);
+    assert.notDeepEqual([...readFileSync(join(out, 'icon-32.png'))],
       [...readFileSync(join(out, 'favicon.ico')).subarray(22)],
-      '--bg none leaves icon-32.png unpadded, so it is the ICO payload again');
+      'a requested32px PNG is separate from the48px ICO payload');
   });
 
   it('use a full-bleed source as it is', async () => {
@@ -800,10 +802,7 @@ describe('the single SVG preserves animation', () => {
 // ------------------------------------------------------------------ 16, 17 --
 
 describe('rendering', () => {
-  it('renders 32px twice: a padded icon-32.png and a separate ICO payload', async () => {
-    // The inversion of the old de-duplication: icon-32.png is padded now and the ICO
-    // payload is not, so one size needs two renders. --bg none is the exception that
-    // proves it: unpadded there, the two are the same bytes again (pinned above).
+  it('keeps a requested padded32px PNG separate from the48px ICO payload', async () => {
     const { out } = await SMALL('second');
     const icon32 = readFileSync(join(out, 'icon-32.png'));
     const payload = readFileSync(join(out, 'favicon.ico')).subarray(22);
@@ -827,7 +826,7 @@ describe('rendering', () => {
         assert.deepEqual([hd.width, hd.height], [px, px], `${w}x${h}: ${file}`);
       }
       const ico = readFileSync(join(out, 'favicon.ico'));
-      assert.deepEqual([header(ico.subarray(22)).width, header(ico.subarray(22)).height], [32, 32], `${w}x${h}: ICO payload`);
+      assert.deepEqual([header(ico.subarray(22)).width, header(ico.subarray(22)).height], [48, 48], `${w}x${h}: ICO payload`);
     }
   });
 
@@ -1080,7 +1079,7 @@ describe('the astro integration', () => {
     assert.ok(!existsSync(join(root, 'public')), 'config:setup built something');
   });
 
-  it('prefixes config.base and keeps sizes="32x32" on the ICO', async () => {
+  it('prefixes config.base and keeps sizes="48x48" on the ICO', async () => {
     const root = freshDir();
     const s = stub(root, '/blog/');
     await favseedAstro({}).hooks['astro:config:setup']({ command: 'build', ...s.args });
@@ -1088,7 +1087,7 @@ describe('the astro integration', () => {
     assert.match(links, /\/blog\/favicon\.ico/);
     assert.match(links, /\/blog\/icon\.svg/);
     assert.match(links, /\/blog\/apple-touch-icon\.png/);
-    assert.match(links, /sizes=\\"32x32\\"/);
+    assert.match(links, /sizes=\\"48x48\\"/);
     assert.ok(!links.includes('logo.svg'), 'logo.svg must not be linked');
   });
 

@@ -11,7 +11,7 @@ mark is animated.
 
 ```
 icon.svg                  (optimized, animation and styling preserved)
-favicon.ico               (32×32 PNG payload)
+favicon.ico               (48×48 PNG payload)
 apple-touch-icon.png      (180×180, safe-zone placement)
 icon-192.png               (192×192, safe-zone placement)
 icon-512.png               (512×512, safe-zone placement)
@@ -29,7 +29,7 @@ measurements](site/README.md).
 Add the links to your `<head>`. `favseed --html` prints them:
 
 ```html
-<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 ```
@@ -52,7 +52,7 @@ records its byte savings and the speed, size and accuracy tradeoffs.
 | File | What it is |
 |---|---|
 | `icon.svg` | One optimized SVG for the favicon and page images. Animation, styling and accessibility are preserved by default. |
-| `favicon.ico` | One 32×32 entry, stored as a raw PNG in a 22-byte container. |
+| `favicon.ico` | One 48×48 entry, stored as a raw PNG in a 22-byte container. |
 | `apple-touch-icon.png` | 180×180 (60pt @3x; no iPhone renders above @3x) on the `--bg` ground, the mark placed in the safe zone so iOS's rounded mask cuts nothing. |
 | `icon-<size>.png` | On the `--bg` ground, the mark placed in the safe zone the same way (`--padding`, default `auto`). Default 192 and 512, the pair Chrome's install criteria document. The manifest's `any maskable` icons. |
 | `site.webmanifest` | Only with `--manifest`. Icons only: you merge your own `name` and `theme_color`. |
@@ -86,9 +86,9 @@ lossless PNG candidates. Extra Zopfli compression is opt-in. Its browser and CLI
 same engine, options and output bytes. Full builds select SVG precision against the source's
 static appearance before PNG encoding; PNG quality and tiny-ICO error are measured separately.
 
-In our four-logo benchmark with matching raster inputs, the default quality-80 set used **0.8%
+In our four-logo benchmark with matching raster inputs, the default quality-80 set used **0.5%
 more PNG/ICO bytes than Vite PWA assets-generator 2.0.0’s default**, with lower measured PNG pixel error.
-See [the measurements and method](https://github.com/cevdetch/favseed/blob/main/bench/precision/README.md); results depend on the input.
+See [the measurements and method](https://github.com/cevdetch/favseed/blob/main/bench/ico-size/README.md); results depend on the input.
 
 ## Flags
 
@@ -223,7 +223,7 @@ At 180 px the same mark snaps from 116 to 112 px and the apple icon is 151 B.
 
 `--bg none` keeps the set transparent and unpadded, declared `"any"` only: a platform
 composites a transparent icon onto a colour of its own choosing, so the safe zone would mean
-nothing, and padding 32 px of tab furniture only makes the mark smaller.
+nothing, and padding the ICO fallback only makes the mark smaller.
 
 ## Dark mode
 
